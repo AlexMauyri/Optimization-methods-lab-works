@@ -4,10 +4,11 @@
 enum search_method_type {
     BISECT,
     GOLDEN_RATIO,
-    FIBONACCHI
+    FIBONACCHI,
+    NONE
 };
 
-const auto search_method_string = {"Bisection", "Golden ratio", "Fibonacchi"};
+const auto search_method_string = {"Bisection", "Golden ratio", "Fibonacchi", "None"};
 
 struct search_result {
     search_method_type type;
@@ -15,6 +16,8 @@ struct search_result {
     F64 accuracy;
     UI64 iterations;
     UI64 function_probes;
+
+    search_result() : type(NONE), result(0.0), accuracy(0.0), iterations(0), function_probes(0) {}
 
     search_result(search_method_type type, F64 result, F64 accuracy, UI64 iterations, UI64 function_probes) {
         this->type = type;
