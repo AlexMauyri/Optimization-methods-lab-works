@@ -1,11 +1,12 @@
+#include <functional>
+#include <cmath>
 #include "one_dim.h"
 #include "common.h"
-#include "numeric_utils.h"
 #include "search_result.h"
 
-search_result* bisect(std::function<F64(F64)> function, F64 left, F64 right, const F64 eps, const UI64 max_iterations) {
+search_result* bisect(const std::function<double(double)> function, double left, double right, const double eps, const uint64_t max_iterations) {
     #ifdef __DEBUG__
-        std::cout << "Called bisect method with parameters: left = " << left << "; right = " << right 
+        std::cout << "Called one dimensional bisect method with parameters: left = " << left << "; right = " << right 
         << "; eps =" << eps << "; max_iterations = " << max_iterations << '\n';
     #endif
 
@@ -19,8 +20,8 @@ search_result* bisect(std::function<F64(F64)> function, F64 left, F64 right, con
 
         statistic->result = (left + right) / 2;
         
-        F64 x_l = statistic->result - eps / 10;
-        F64 x_r = statistic->result + eps / 10;
+        double x_l = statistic->result - eps / 10;
+        double x_r = statistic->result + eps / 10;
 
         if (function(x_l) > function(x_r)) {
             left = x_l;
@@ -36,20 +37,20 @@ search_result* bisect(std::function<F64(F64)> function, F64 left, F64 right, con
     return statistic;
 }
 
-search_result* golden_ratio(std::function<F64(F64)> function, F64 left, F64 right, const F64 eps, const UI64 max_iterations) {
+search_result* golden_ratio(const std::function<double(double)> function, double left, double right, const double eps, const uint64_t max_iterations) {
     #ifdef __DEBUG__
-        std::cout << "Called golden ratio method with parameters: left = " << left << "; right = " << right 
+        std::cout << "Called one dimensional golden ratio method with parameters: left = " << left << "; right = " << right 
         << "; eps =" << eps << "; max_iterations = " << max_iterations << '\n';
     #endif
 
     search_result* statistic = new search_result();
     statistic->type = search_method_type::GOLDEN_RATIO;
 
-    F64 x_r = left + PSI * (right - left);
-    F64 x_l = right - PSI * (right - left);
+    double x_r = left + PSI * (right - left);
+    double x_l = right - PSI * (right - left);
 
-    F64 y_l = function(x_l);
-    F64 y_r = function(x_r);
+    double y_l = function(x_l);
+    double y_r = function(x_r);
 
     while (statistic->iterations != max_iterations && (statistic->accuracy = std::abs(right - left)) >= 2 * eps) {
         #ifdef __DEBUG__
@@ -78,17 +79,17 @@ search_result* golden_ratio(std::function<F64(F64)> function, F64 left, F64 righ
     return statistic;
 }
 
-search_result* fibonacchi(std::function<F64(F64)> function, F64 left, F64 right, const F64 eps) {
+search_result* fibonacchi(const std::function<double(double)> function, double left, double right, const double eps) {
     #ifdef __DEBUG__
-        std::cout << "Called fibonacchi method with parameters: left = " << left << "; right = " << right 
+        std::cout << "Called one dimensional fibonacchi method with parameters: left = " << left << "; right = " << right 
         << "; eps =" << eps << '\n';
     #endif
 
     search_result* statistic = new search_result();
     statistic->type = search_method_type::FIBONACCHI;
 
-    I32 fib_temp = 0, fib_1 = 1, fib_2 = 1;
-    F64 threshold = (right - left) / eps;
+    uint64_t fib_temp = 0, fib_1 = 1, fib_2 = 1;
+    double threshold = (right - left) / eps;
 
     while (fib_2 < threshold) {
         fib_temp = fib_1;
@@ -97,13 +98,13 @@ search_result* fibonacchi(std::function<F64(F64)> function, F64 left, F64 right,
         ++statistic->iterations;
     }
 
-    F64 x_r = left + static_cast<double>(fib_1) / fib_2 * (right - left);
-    F64 x_l = left + static_cast<double>(fib_2 - fib_1) / fib_2 * (right - left);
+    double x_r = left + static_cast<double>(fib_1) / fib_2 * (right - left);
+    double x_l = left + static_cast<double>(fib_2 - fib_1) / fib_2 * (right - left);
 
-    F64 y_r = function(x_r);
-    F64 y_l = function(x_l);
+    double y_r = function(x_r);
+    double y_l = function(x_l);
 
-    for (UI64 iterations = statistic->iterations; iterations > 0; --iterations) {
+    for (uint64_t iterations = statistic->iterations; iterations > 0; --iterations) {
         #ifdef __DEBUG__
             std::cout << "Iteration #" << statistic->iterations - iterations + 1 << ": left = " << left << "; right = " << right << '\n';
         #endif

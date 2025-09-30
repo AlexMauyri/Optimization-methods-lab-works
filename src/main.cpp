@@ -1,27 +1,50 @@
 #include <functional>
 #include <iostream>
+#include <Eigen/Dense>
 
 #include "one_dim.h"
+#include "multi_dim.h"
 #include "common.h"
-#include "search_result.h"
+#include "custom.h"
 
-static F64 test_func(const F64 x)
+static double test_func(const double x)
 {
-	return (x - 1) * (x - 5);
+	return (x - 1) * (x - 5); //3
 }
 
+static double test_func_2(const Eigen::VectorXd& x)
+{
+	return (x[0] - 5) * x[0] + (x[1] - 3) * x[1]; //[2.5, 1.5]
+}
 
-void lab1(std::function<F64(F64)> function) {
-    F64 x0 = 0;
-    F64 x1 = 10;
+void lab1(const std::function<double(double)> function) {
+    double x0 = 0;
+    double x1 = 10;
 
     std::cout << *bisect(function, x0, x1) << '\n';
     std::cout << *golden_ratio(function, x0, x1) << '\n';
     std::cout << *fibonacchi(function, x0, x1) << '\n';
 }
 
+void lab2(std::function<double(const Eigen::VectorXd&)> function_nd) {
+    Eigen::VectorXd x_0(2);
+	Eigen::VectorXd x_1(2);
+
+    x_0 << 0.0, 0.0;
+    x_1 << 5.0, 3.0;
+    
+	std::cout << *bisect(function_nd, x_1, x_0) << "\n";
+	std::cout << *golden_ratio(function_nd, x_1, x_0) << "\n";
+	std::cout << *fibonacchi(function_nd, x_1, x_0) << "\n";
+	
+    Eigen::VectorXd start(2);
+    start << -14, -33.98;
+	std::cout << *per_coord_descend(function_nd, start) << "\n";
+}
+
 int main() {
     lab1(test_func);
+    lab2(test_func_2);
 
     return 0;
 }
