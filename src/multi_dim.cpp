@@ -203,9 +203,8 @@ search_result_nd* per_coord_descend(
 
     Eigen::VectorXd x_0(start), x_1(start);
 
-    uint64_t coord_i, iteration;
+    uint64_t coord_i, iteration, optimized_coord_count = 0;
     double x_i;
-    bool desc_by_all_coords = false;
     for (iteration = 0; iteration < max_iterations; ++iteration) {
         #ifdef __DEBUG__
             std::cout << "Iteration #" << iteration + 1 << ": left = ";
@@ -215,7 +214,6 @@ search_result_nd* per_coord_descend(
             std::cout << '\n';
         #endif
         coord_i = iteration % start.size();
-        desc_by_all_coords = coord_i == (start.size() - 1);
 
         x_1[coord_i] -= eps;
         double y_0 = function_nd(x_1);
@@ -231,16 +229,22 @@ search_result_nd* per_coord_descend(
         
         x_i = x_0[coord_i];
 
+        std::cout.setstate(std::ios_base::failbit);
         auto sub_statistic = fibonacchi(function_nd, x_0, x_1, eps);
+        std::cout.clear();
+
         statistic->result = sub_statistic->result;
         statistic->accuracy = sub_statistic->accuracy;
         statistic->function_probes += sub_statistic->function_probes + 2;
 
         x_0 = sub_statistic->result;
     
-
-        if (std::abs(x_1[coord_i] - x_i) < 2.0 * eps && desc_by_all_coords) {
-            break;
+        if (std::abs(x_1[coord_i] - x_i) < 2.0 * eps) {
+            ++optimized_coord_count;
+            
+            if (optimized_coord_count == x_1.size()) {
+                break;
+            }
         }
     }
     statistic->iterations = iteration;
