@@ -9,10 +9,11 @@ enum search_method_type_nd {
     ND_GOLDEN_RATIO,
     ND_FIBONACCHI,
     PER_COORD_DESCEND,
+    GRADIENT_DESCEND,
     ND_NONE
 };
 
-const auto search_method_string_nd = {"Bisection", "Golden ratio", "Fibonacchi", "Per coordinate descend", "None"};
+const auto search_method_string_nd = {"Bisection", "Golden ratio", "Fibonacchi", "Per coordinate descend", "Gradient Descend", "None"};
 
 struct search_result_nd {
     search_method_type_nd type;

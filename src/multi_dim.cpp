@@ -251,3 +251,50 @@ search_result_nd* per_coord_descend(
 
     return statistic;
 }
+
+search_result_nd* gradient_descend(
+    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    const Eigen::VectorXd& start, 
+    const double eps=N_DIM_ACCURACY, 
+    const uint64_t max_iterations=N_DIM_ITERS_MAX
+) {
+
+    #ifdef __DEBUG__
+        std::cout << "Called multi dimensional gradient_descend method with parameters:\nstart = ";
+        custom_vector_print(std::cout, start); 
+        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+    #endif
+    search_result_nd* statistic = new search_result_nd();
+    statistic->type = search_method_type_nd::GRADIENT_DESCEND;
+
+    Eigen::VectorXd x_i(start), x_i_1(start.size()), grad(start.size());
+
+    do {
+        grad = gradient(function_nd, x_i);
+        x_i_1 = x_i;
+        x_i -= grad;
+
+        std::cout.setstate(std::ios_base::failbit);
+        auto sub_statistic = fibonacchi(function_nd, x_i_1, x_i, eps);
+        std::cout.clear();
+
+        x_i = sub_statistic->result;
+        statistic->function_probes += sub_statistic->function_probes + 2;
+
+        #ifdef __DEBUG__
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
+            custom_vector_print(std::cout, x_i);
+            std::cout << ", x_i-1 = ";
+            custom_vector_print(std::cout, x_i_1);
+            std::cout << ", gradient = ";
+            custom_vector_print(std::cout, grad);
+            std::cout << '\n';
+        #endif
+
+        ++statistic->iterations;
+    } while (statistic->iterations != max_iterations && (statistic->accuracy = distance(x_i, x_i_1)) >= 2.0 * eps);
+
+    statistic->result = (x_i_1 + x_i) * 0.5;
+
+    return statistic;
+}

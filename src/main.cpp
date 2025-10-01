@@ -33,18 +33,27 @@ void lab2(std::function<double(const Eigen::VectorXd&)> function_nd) {
     x_0 << 0.0, 0.0;
     x_1 << 5.0, 3.0;
     
-	std::cout << *bisect(function_nd, x_1, x_0) << "\n";
-	std::cout << *golden_ratio(function_nd, x_1, x_0) << "\n";
-	std::cout << *fibonacchi(function_nd, x_1, x_0) << "\n";
+	std::cout << *bisect(function_nd, x_1, x_0) << '\n';
+	std::cout << *golden_ratio(function_nd, x_1, x_0) << '\n';
+	std::cout << *fibonacchi(function_nd, x_1, x_0) << '\n';
 	
     Eigen::VectorXd start(2);
     start << -14, -33.98;
-	std::cout << *per_coord_descend(function_nd, start) << "\n";
+	std::cout << *per_coord_descend(function_nd, start) << '\n';
+}
+
+void lab3(std::function<double(const Eigen::VectorXd&)> function_nd) {
+    Eigen::VectorXd start(2);
+    start << -14, -33.98;
+
+    std::cout << *gradient_descend(function_nd, start) << '\n';
 }
 
 int main() {
-    lab1(test_func);
-    lab2(test_func_2);
+    //lab1(test_func);
+    //lab2(test_func_2);
+    lab3(test_func_2);
+    
 
     return 0;
 }

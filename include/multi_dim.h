@@ -35,3 +35,10 @@ search_result_nd* per_coord_descend(
     const double eps=N_DIM_ACCURACY, 
     const uint64_t max_iterations=N_DIM_ITERS_MAX
 );
+
+search_result_nd* gradient_descend(
+    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    const Eigen::VectorXd& start, 
+    const double eps=N_DIM_ACCURACY, 
+    const uint64_t max_iterations=N_DIM_ITERS_MAX
+);
