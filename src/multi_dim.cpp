@@ -255,8 +255,8 @@ search_result_nd* per_coord_descend(
 search_result_nd* gradient_descend(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& start, 
-    const double eps=N_DIM_ACCURACY, 
-    const uint64_t max_iterations=N_DIM_ITERS_MAX
+    const double eps, 
+    const uint64_t max_iterations
 ) {
 
     #ifdef __DEBUG__
@@ -302,8 +302,8 @@ search_result_nd* gradient_descend(
 search_result_nd* conj_gradient_descend(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& start, 
-    const double eps=N_DIM_ACCURACY, 
-    const uint64_t max_iterations=N_DIM_ITERS_MAX
+    const double eps, 
+    const uint64_t max_iterations
 ) {
     #ifdef __DEBUG__
         std::cout << "Called multi dimensional conjugate_gradient_descend method with parameters:\nstart = ";
@@ -356,6 +356,53 @@ search_result_nd* conj_gradient_descend(
     }
 
     statistic->result = (x_i_1 + x_i) * 0.5;
+
+    return statistic;
+}
+
+search_result_nd* newtone_raphson(
+    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    const Eigen::VectorXd& start, 
+    const double eps, 
+    const uint64_t max_iterations
+) {
+    #ifdef __DEBUG__
+        std::cout << "Called multi dimensional newtone_raphson method with parameters:\nstart = ";
+        custom_vector_print(std::cout, start); 
+        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+    #endif
+
+    search_result_nd* statistic = new search_result_nd();
+    statistic->type = search_method_type_nd::NEWTONE_RAPHSON;
+
+    Eigen::VectorXd x_i, x_i_1(start), grad;
+    Eigen::MatrixXd hess(start.size(), start.size());
+
+    while (statistic->iterations != max_iterations) {
+        grad = gradient(function_nd, x_i_1);
+        hess = hessian(function_nd, x_i_1).inverse();
+        x_i = x_i_1 - (hess * grad);
+        #ifdef __DEBUG__
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
+            custom_vector_print(std::cout, x_i);
+            std::cout << ", x_i-1 = ";
+            custom_vector_print(std::cout, x_i_1);
+            std::cout << ", gradient = ";
+            custom_vector_print(std::cout, grad);
+            std::cout << '\n';
+        #endif
+
+        ++statistic->iterations;
+
+        if ((statistic->accuracy = distance(x_i, x_i_1)) < 2.0 * eps) {
+            break;
+        }
+
+        x_i_1 = x_i;
+    }
+
+    statistic->result = (x_i_1 + x_i) * 0.5;
+    statistic->function_probes = statistic->iterations * 2 * start.size() * (start.size() + 2);
 
     return statistic;
 }

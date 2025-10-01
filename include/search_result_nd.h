@@ -11,10 +11,15 @@ enum search_method_type_nd {
     PER_COORD_DESCEND,
     GRADIENT_DESCEND,
     CONJ_GRADIENT_DESCEND,
+    NEWTONE_RAPHSON,
     ND_NONE
 };
 
-const auto search_method_string_nd = {"Bisection", "Golden ratio", "Fibonacchi", "Per coordinate descend", "Gradient descend", "Conjugate gradient descend", "None"};
+const auto search_method_string_nd = {
+    "Bisection", "Golden ratio", "Fibonacchi", 
+    "Per coordinate descend", "Gradient descend", "Conjugate gradient descend", 
+    "Newtone Raphson", "None"
+};
 
 struct search_result_nd {
     search_method_type_nd type;

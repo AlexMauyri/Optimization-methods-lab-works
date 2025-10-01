@@ -11,20 +11,53 @@ Eigen::VectorXd direction(const Eigen::VectorXd& left, const Eigen::VectorXd& ri
     return (right - left).normalized();
 }
 
-Eigen::VectorXd gradient(const std::function<double(const Eigen::VectorXd)> function_nd, const Eigen::VectorXd& point) {
-    Eigen::VectorXd grad(point.size()), copy(point);
+double partial(std::function<double(const Eigen::VectorXd)> function_nd, Eigen::VectorXd& point, uint32_t index) {
+    if (index >= point.size()) {
+        throw std::runtime_error("Index value is out of vector indices range");
+    }
+
+    point[index] += DX;
+    double y_1 = function_nd(point);
+    point[index] -= 2.0 * DX;
+    double y_2 = function_nd(point);
+    point[index] += DX;
+
+    return ((y_1 - y_2) / (2.0 * DX));
+}
+
+double partial2(std::function<double(const Eigen::VectorXd)> function_nd, Eigen::VectorXd& point, uint32_t index1, uint32_t index2) {
+    if (index2 >= point.size()) {
+        throw std::runtime_error("Index value is out of vector indices range");
+    }
+    point[index2] += DX;
+    double y_1 = partial(function_nd, point, index1);
+    point[index2] -= 2.0 * DX;
+    double y_2 = partial(function_nd, point, index1);
+    point[index2] += DX;
+
+    return ((y_1 - y_2) / (2.0 * DX));
+}
+
+Eigen::VectorXd gradient(std::function<double(const Eigen::VectorXd)> function_nd, Eigen::VectorXd& point) {
+    Eigen::VectorXd grad(point.size());
 
     for (int i = 0; i < grad.size(); ++i) {
-        
-        copy[i] += DX;
-        double y_1 = function_nd(copy);
-        copy[i] -= 2.0 * DX;
-        double y_2 = function_nd(copy);
-
-        grad[i] = ((y_1 - y_2) / (2.0 * DX));
+        grad[i] = partial(function_nd, point, i);
     }
 
     return grad;
+}
+
+Eigen::MatrixXd hessian(std::function<double(const Eigen::VectorXd)> function_nd, Eigen::VectorXd& point) {
+    Eigen::MatrixXd result(point.size(), point.size());
+
+    for (uint32_t row = 0; row < result.rows(); ++row) {
+        for (uint32_t col = row; col < result.cols(); ++col) {
+            result(col, row) = result(row, col) = partial2(function_nd, point, row, col);
+        }
+    }
+
+    return result;
 }
 
 double distance(const Eigen::VectorXd& left, const Eigen::VectorXd& right) {

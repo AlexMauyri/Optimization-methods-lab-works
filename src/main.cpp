@@ -48,6 +48,7 @@ void lab3(std::function<double(const Eigen::VectorXd&)> function_nd) {
 
     std::cout << *gradient_descend(function_nd, start) << '\n';
     std::cout << *conj_gradient_descend(function_nd, start) << '\n';
+    std::cout << *newtone_raphson(function_nd, start) << '\n';
 }
 
 int main() {
