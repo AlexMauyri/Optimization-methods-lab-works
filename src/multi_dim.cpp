@@ -298,3 +298,64 @@ search_result_nd* gradient_descend(
 
     return statistic;
 }
+
+search_result_nd* conj_gradient_descend(
+    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    const Eigen::VectorXd& start, 
+    const double eps=N_DIM_ACCURACY, 
+    const uint64_t max_iterations=N_DIM_ITERS_MAX
+) {
+    #ifdef __DEBUG__
+        std::cout << "Called multi dimensional conjugate_gradient_descend method with parameters:\nstart = ";
+        custom_vector_print(std::cout, start); 
+        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+    #endif
+    search_result_nd* statistic = new search_result_nd();
+    statistic->type = search_method_type_nd::CONJ_GRADIENT_DESCEND;
+
+    Eigen::VectorXd x_i(start.size()), x_i_1(start);
+    Eigen::VectorXd s_i, s_i_1 = -1.0 * gradient(function_nd, x_i_1);
+
+    double omega;
+
+    while (statistic->iterations != max_iterations) {
+        x_i = x_i_1 + s_i_1;
+
+        if ((statistic->accuracy = distance(x_i, x_i_1)) < 2.0 * eps) {
+            break;
+        }
+
+        std::cout.setstate(std::ios_base::failbit);
+        auto sub_statistic = fibonacchi(function_nd, x_i_1, x_i, eps);
+        std::cout.clear();
+
+        x_i = sub_statistic->result;
+        statistic->function_probes += sub_statistic->function_probes + 2;
+
+        s_i = gradient(function_nd, x_i);
+
+        omega = s_i.norm() / s_i_1.norm();
+
+        s_i_1 = omega * s_i_1 - s_i;
+
+        #ifdef __DEBUG__
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
+            custom_vector_print(std::cout, x_i);
+            std::cout << ", x_i-1 = ";
+            custom_vector_print(std::cout, x_i_1);
+            std::cout << ", s_i = ";
+            custom_vector_print(std::cout, s_i);
+            std::cout << ", s_i-1 = ";
+            custom_vector_print(std::cout, s_i_1);
+            std::cout << '\n';
+        #endif
+
+        x_i_1 = x_i;
+
+        ++statistic->iterations;
+    }
+
+    statistic->result = (x_i_1 + x_i) * 0.5;
+
+    return statistic;
+}
