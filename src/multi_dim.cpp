@@ -275,10 +275,10 @@ search_result_nd* gradient_descend(
         curr = prev - grad;
 
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": next = ";
-            custom_vector_print(std::cout, x_i);
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": curr = ";
+            custom_vector_print(std::cout, curr);
             std::cout << ", prev = ";
-            custom_vector_print(std::cout, x_i_1);
+            custom_vector_print(std::cout, prev);
             std::cout << ", gradient = ";
             custom_vector_print(std::cout, grad);
             std::cout << '\n';
@@ -326,6 +326,14 @@ search_result_nd* conj_gradient_descend(
     for (; statistic->iterations != max_iterations; ++statistic->iterations) {
         curr = prev + prev_s;
 
+        #ifdef __DEBUG__
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": curr = ";
+            custom_vector_print(std::cout, curr);
+            std::cout << ", prev = ";
+            custom_vector_print(std::cout, prev);
+            std::cout << '\n';
+        #endif
+
         if ((statistic->accuracy = distance(prev, curr)) < 2.0 * eps) {
             break;
         }
@@ -341,18 +349,6 @@ search_result_nd* conj_gradient_descend(
         curr_s = gradient(function_nd, curr);
         omega = curr_s.norm() / prev_s.norm();
         prev_s = omega * prev_s - curr_s;
-
-        #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
-            custom_vector_print(std::cout, x_i);
-            std::cout << ", x_i-1 = ";
-            custom_vector_print(std::cout, x_i_1);
-            std::cout << ", s_i = ";
-            custom_vector_print(std::cout, s_i);
-            std::cout << ", s_i-1 = ";
-            custom_vector_print(std::cout, s_i_1);
-            std::cout << '\n';
-        #endif
 
         prev = curr;
     }
@@ -385,10 +381,10 @@ search_result_nd* newtone_raphson(
         hess = hessian(function_nd, prev).inverse();
         curr = prev - (hess * grad);
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
-            custom_vector_print(std::cout, x_i);
-            std::cout << ", x_i-1 = ";
-            custom_vector_print(std::cout, x_i_1);
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": curr = ";
+            custom_vector_print(std::cout, curr);
+            std::cout << ", prev = ";
+            custom_vector_print(std::cout, prev);
             std::cout << ", gradient = ";
             custom_vector_print(std::cout, grad);
             std::cout << '\n';
