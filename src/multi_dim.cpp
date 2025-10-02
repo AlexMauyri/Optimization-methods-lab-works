@@ -235,14 +235,15 @@ search_result_nd* per_coord_descend(
 
         statistic->result = sub_statistic->result;
         statistic->accuracy = sub_statistic->accuracy;
+        statistic->iterations += sub_statistic->iterations;
         statistic->function_probes += sub_statistic->function_probes + 2;
 
         x_0 = sub_statistic->result;
     
-        if (std::abs(x_1[coord_i] - x_i) < 2.0 * eps) {
+        if (std::abs(x_0[coord_i] - x_i) < 2.0 * eps) {
             ++optimized_coord_count;
             
-            if (optimized_coord_count == x_1.size()) {
+            if (optimized_coord_count == start.size()) {
                 break;
             }
         }
@@ -267,34 +268,38 @@ search_result_nd* gradient_descend(
     search_result_nd* statistic = new search_result_nd();
     statistic->type = search_method_type_nd::GRADIENT_DESCEND;
 
-    Eigen::VectorXd x_i(start), x_i_1(start.size()), grad(start.size());
+    Eigen::VectorXd curr(start.size()), prev(start), grad(start.size());
 
-    do {
-        grad = gradient(function_nd, x_i);
-        x_i_1 = x_i;
-        x_i -= grad;
-
-        std::cout.setstate(std::ios_base::failbit);
-        auto sub_statistic = fibonacchi(function_nd, x_i_1, x_i, eps);
-        std::cout.clear();
-
-        x_i = sub_statistic->result;
-        statistic->function_probes += sub_statistic->function_probes + 2;
+    for (; statistic->iterations != max_iterations; ++statistic->iterations) {
+        grad = gradient(function_nd, prev);
+        curr = prev - grad;
 
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": next = ";
             custom_vector_print(std::cout, x_i);
-            std::cout << ", x_i-1 = ";
+            std::cout << ", prev = ";
             custom_vector_print(std::cout, x_i_1);
             std::cout << ", gradient = ";
             custom_vector_print(std::cout, grad);
             std::cout << '\n';
         #endif
 
-        ++statistic->iterations;
-    } while (statistic->iterations != max_iterations && (statistic->accuracy = distance(x_i, x_i_1)) >= 2.0 * eps);
+        std::cout.setstate(std::ios_base::failbit);
+        auto sub_statistic = fibonacchi(function_nd, prev, curr, eps);
+        std::cout.clear();
 
-    statistic->result = (x_i_1 + x_i) * 0.5;
+        curr = sub_statistic->result;
+        statistic->iterations += sub_statistic->iterations;
+        statistic->function_probes += sub_statistic->function_probes + 2;
+
+        if ((statistic->accuracy = distance(prev, curr)) < 2.0 * eps) {
+            break;
+        }
+
+        prev = curr;
+    }
+
+    statistic->result = (prev + curr) * 0.5;
 
     return statistic;
 }
@@ -313,30 +318,29 @@ search_result_nd* conj_gradient_descend(
     search_result_nd* statistic = new search_result_nd();
     statistic->type = search_method_type_nd::CONJ_GRADIENT_DESCEND;
 
-    Eigen::VectorXd x_i(start.size()), x_i_1(start);
-    Eigen::VectorXd s_i, s_i_1 = -1.0 * gradient(function_nd, x_i_1);
+    Eigen::VectorXd curr(start.size()), prev(start);
+    Eigen::VectorXd curr_s, prev_s = -1.0 * gradient(function_nd, prev);
 
     double omega;
 
-    while (statistic->iterations != max_iterations) {
-        x_i = x_i_1 + s_i_1;
+    for (; statistic->iterations != max_iterations; ++statistic->iterations) {
+        curr = prev + prev_s;
 
-        if ((statistic->accuracy = distance(x_i, x_i_1)) < 2.0 * eps) {
+        if ((statistic->accuracy = distance(prev, curr)) < 2.0 * eps) {
             break;
         }
 
         std::cout.setstate(std::ios_base::failbit);
-        auto sub_statistic = fibonacchi(function_nd, x_i_1, x_i, eps);
+        auto sub_statistic = fibonacchi(function_nd, prev, curr, eps);
         std::cout.clear();
 
-        x_i = sub_statistic->result;
+        curr = sub_statistic->result;
+        statistic->iterations += sub_statistic->iterations;
         statistic->function_probes += sub_statistic->function_probes + 2;
 
-        s_i = gradient(function_nd, x_i);
-
-        omega = s_i.norm() / s_i_1.norm();
-
-        s_i_1 = omega * s_i_1 - s_i;
+        curr_s = gradient(function_nd, curr);
+        omega = curr_s.norm() / prev_s.norm();
+        prev_s = omega * prev_s - curr_s;
 
         #ifdef __DEBUG__
             std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
@@ -350,12 +354,10 @@ search_result_nd* conj_gradient_descend(
             std::cout << '\n';
         #endif
 
-        x_i_1 = x_i;
-
-        ++statistic->iterations;
+        prev = curr;
     }
 
-    statistic->result = (x_i_1 + x_i) * 0.5;
+    statistic->result = (prev + curr) * 0.5;
 
     return statistic;
 }
@@ -375,13 +377,13 @@ search_result_nd* newtone_raphson(
     search_result_nd* statistic = new search_result_nd();
     statistic->type = search_method_type_nd::NEWTONE_RAPHSON;
 
-    Eigen::VectorXd x_i, x_i_1(start), grad;
+    Eigen::VectorXd curr, prev(start), grad;
     Eigen::MatrixXd hess(start.size(), start.size());
 
-    while (statistic->iterations != max_iterations) {
-        grad = gradient(function_nd, x_i_1);
-        hess = hessian(function_nd, x_i_1).inverse();
-        x_i = x_i_1 - (hess * grad);
+    for (; statistic->iterations != max_iterations; ++statistic->iterations) {
+        grad = gradient(function_nd, prev);
+        hess = hessian(function_nd, prev).inverse();
+        curr = prev - (hess * grad);
         #ifdef __DEBUG__
             std::cout << "Iteration #" << statistic->iterations + 1 << ": x_i = ";
             custom_vector_print(std::cout, x_i);
@@ -392,16 +394,14 @@ search_result_nd* newtone_raphson(
             std::cout << '\n';
         #endif
 
-        ++statistic->iterations;
-
-        if ((statistic->accuracy = distance(x_i, x_i_1)) < 2.0 * eps) {
+        if ((statistic->accuracy = distance(prev, curr)) < 2.0 * eps) {
             break;
         }
 
-        x_i_1 = x_i;
+        prev = curr;
     }
 
-    statistic->result = (x_i_1 + x_i) * 0.5;
+    statistic->result = (prev + curr) * 0.5;
     statistic->function_probes = statistic->iterations * 2 * start.size() * (start.size() + 2);
 
     return statistic;
