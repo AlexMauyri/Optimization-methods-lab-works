@@ -7,5 +7,5 @@
 #define N_DIM_ITERS_MAX         100
 #define DX                      1e-6
 #define PER_COORD_DESCEND_STEP  2.0
-#define ACCURACY                1e-5
+#define ACCURACY                1e-6
 #define ITERS_MAX               50

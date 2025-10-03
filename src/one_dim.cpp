@@ -100,8 +100,8 @@ search_result* fibonacchi(const std::function<double(double)> function, double l
         ++statistic->iterations;
     }
 
-    double x_r = left + static_cast<double>(fib_1) / fib_2 * (right - left);
-    double x_l = left + static_cast<double>(fib_2 - fib_1) / fib_2 * (right - left);
+    double x_r = left + fib_1 * (right - left) / fib_2;
+    double x_l = left + (fib_2 - fib_1) * (right - left) / fib_2;
 
     double y_r = function(x_r);
     double y_l = function(x_l);
@@ -120,13 +120,13 @@ search_result* fibonacchi(const std::function<double(double)> function, double l
             left = x_l;
             x_l = x_r;
             y_l = y_r;
-            x_r = left + static_cast<double>(fib_1) / fib_2 * (right - left);
+            x_r = left + fib_1 * (right - left) / fib_2;
             y_r = function(x_r);
         } else {
             right = x_r;
             x_r = x_l;
             y_r = y_l;
-            x_l = left + static_cast<double>(fib_2 - fib_1) / fib_2 * (right - left);
+            x_l = left + (fib_2 - fib_1) * (right - left) / fib_2;
             y_l = function(x_l);
         }
     }
