@@ -1,5 +1,5 @@
 #include <Eigen/Dense>
-#include <tuple>
+
 #include "common.h"
 #include "search_result_nd.h"
 #include "custom.h"
@@ -32,7 +32,7 @@ search_result_nd* bisect(
             custom_vector_print(std::cout, lhs);  
             std::cout << "; right = "; 
             custom_vector_print(std::cout, rhs);
-            std::cout << '\n';
+            std::cout << "; accuracy = " << statistic->accuracy << '\n';
         #endif
 
         statistic->result = (lhs + rhs) * 0.5;
@@ -87,7 +87,7 @@ search_result_nd* golden_ratio(
             custom_vector_print(std::cout, lhs);  
             std::cout << "; right = "; 
             custom_vector_print(std::cout, rhs);
-            std::cout << '\n';
+            std::cout << "; accuracy = " << statistic->accuracy << '\n';
         #endif
 
         if (y_l > y_r) {
@@ -156,7 +156,7 @@ search_result_nd* fibonacchi(
             custom_vector_print(std::cout, lhs);  
             std::cout << "; right = "; 
             custom_vector_print(std::cout, rhs);
-            std::cout << '\n';
+            std::cout << "; accuracy = " << distance(rhs, lhs) / 2 << '\n';
         #endif
 
         fib_temp = fib_2 - fib_1;

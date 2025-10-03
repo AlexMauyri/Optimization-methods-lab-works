@@ -15,7 +15,8 @@ search_result* bisect(const std::function<double(double)> function, double left,
 
     while (statistic->iterations != max_iterations && (statistic->accuracy = std::abs(right - left)) >= 2 * eps) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": left = " << left << "; right = " << right << '\n';
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": left = " << left
+             << "; right = " << right << "; accuracy = " << statistic->accuracy << '\n';
         #endif
 
         statistic->result = (left + right) / 2;
@@ -54,7 +55,8 @@ search_result* golden_ratio(const std::function<double(double)> function, double
 
     while (statistic->iterations != max_iterations && (statistic->accuracy = std::abs(right - left)) >= 2 * eps) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": left = " << left << "; right = " << right << '\n';
+            std::cout << "Iteration #" << statistic->iterations + 1 << ": left = " << left
+             << "; right = " << right << "; accuracy = " << statistic->accuracy << '\n';
         #endif
         if (y_l > y_r) {
             left = x_l;
@@ -106,7 +108,8 @@ search_result* fibonacchi(const std::function<double(double)> function, double l
 
     for (uint64_t iterations = statistic->iterations; iterations > 0; --iterations) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations - iterations + 1 << ": left = " << left << "; right = " << right << '\n';
+            std::cout << "Iteration #" << statistic->iterations - iterations + 1 << ": left = " << left
+             << "; right = " << right << "; accuracy = " << std::abs(right - left) / 2 << '\n';
         #endif
 
         fib_temp = fib_2 - fib_1;
