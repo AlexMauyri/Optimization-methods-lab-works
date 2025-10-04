@@ -105,7 +105,7 @@ search_result* fibonacchi(const std::function<double(double)> function, double l
 
     double y_r = function(x_r);
     double y_l = function(x_l);
-
+    double delta = 0;
     for (uint64_t iterations = statistic->iterations; iterations > 0; --iterations) {
         #ifdef __DEBUG__
             std::cout << "Iteration #" << statistic->iterations - iterations + 1 << ": left = " << left
@@ -115,18 +115,20 @@ search_result* fibonacchi(const std::function<double(double)> function, double l
         fib_temp = fib_2 - fib_1;
         fib_2 = fib_1;
         fib_1 = fib_temp;
-
+        delta = (right - left) / 100;
         if (y_l > y_r) {
             left = x_l;
             x_l = x_r;
             y_l = y_r;
             x_r = left + fib_1 * (right - left) / fib_2;
+            if (x_r - x_l < delta) x_r = x_r + delta;
             y_r = function(x_r);
         } else {
             right = x_r;
             x_r = x_l;
             y_r = y_l;
             x_l = left + (fib_2 - fib_1) * (right - left) / fib_2;
+            if (x_r - x_l < delta) x_l = x_l - delta;
             y_l = function(x_l);
         }
     }
