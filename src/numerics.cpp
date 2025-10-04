@@ -2,6 +2,7 @@
 #include <Eigen/Dense>
 
 #include "common.h"
+#include "numerics.h"
 
 Eigen::VectorXd direction(const Eigen::VectorXd& left, const Eigen::VectorXd& right) {
     if (left.size() != right.size()) {
@@ -68,7 +69,7 @@ double distance(const Eigen::VectorXd& left, const Eigen::VectorXd& right) {
     return (right - left).norm();
 }
 
-void custom_vector_print(std::ostream& stream, const Eigen::VectorXd& vec) {
+std::ostream& operator<<(std::ostream& stream, const Eigen::VectorXd& vec) {
     stream << '[' << vec[0];
     for (int i = 1; i < vec.size(); ++i) {
         stream << ',' << ' ' << vec[i]; 

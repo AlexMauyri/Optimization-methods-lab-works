@@ -2,9 +2,9 @@
 
 #include "common.h"
 #include "search_result_nd.h"
-#include "custom.h"
+#include "numerics.h"
 
-search_result_nd* bisect(
+search_result_nd bisect(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& left, 
     const Eigen::VectorXd& right, 
@@ -12,33 +12,27 @@ search_result_nd* bisect(
     const uint64_t max_iterations
 ) {
     #ifdef __DEBUG__
-        std::cout << "Called multi dimensional bisect method with parameters:\nleft = ";
-        custom_vector_print(std::cout, left); 
-        std::cout << ";\nright = ";
-        custom_vector_print(std::cout, right); 
-        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+        std::cout << "Called multi dimensional bisect method with parameters:\nleft = " << left << ";\nright = " << right 
+        << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
     #endif
 
-    search_result_nd* statistic = new search_result_nd();
-    statistic->type = search_method_type_nd::ND_BISECT;
+    search_result_nd statistic;
+    statistic.type = search_method_type_nd::ND_BISECT;
     
     Eigen::VectorXd dir(left.size()), lhs(left), rhs(right);
     
     dir = direction(lhs, rhs) * 0.1 * eps;
 
-    while (statistic->iterations != max_iterations && (statistic->accuracy = distance(lhs, rhs)) > 2 * eps) {
+    while (statistic.iterations != max_iterations && (statistic.accuracy = distance(lhs, rhs)) > 2.0 * eps) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": left = ";
-            custom_vector_print(std::cout, lhs);  
-            std::cout << "; right = "; 
-            custom_vector_print(std::cout, rhs);
-            std::cout << "; accuracy = " << statistic->accuracy << '\n';
+            std::cout << "Iteration #" << statistic.iterations + 1 << ": left = " << lhs << "; right = " << rhs
+            << "; accuracy = " << statistic.accuracy << '\n';
         #endif
 
-        statistic->result = (lhs + rhs) * 0.5;
+        statistic.result = (lhs + rhs) * 0.5;
 
-        Eigen::VectorXd x_l = statistic->result - dir;
-        Eigen::VectorXd x_r = statistic->result + dir;
+        Eigen::VectorXd x_l = statistic.result - dir;
+        Eigen::VectorXd x_r = statistic.result + dir;
 
         if (function_nd(x_l) > function_nd(x_r)) {
             lhs = x_l;
@@ -46,16 +40,17 @@ search_result_nd* bisect(
             rhs = x_r;
         }
 
-        ++statistic->iterations;
+        ++statistic.iterations;
     }
 
-    statistic->function_probes = 2 * statistic->iterations;
+    statistic.function_probes = 2 * statistic.iterations;
+    statistic.accuracy *= 0.5;
 
     return statistic;
 }
 
 
-search_result_nd* golden_ratio(
+search_result_nd golden_ratio(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& left, 
     const Eigen::VectorXd& right, 
@@ -63,15 +58,12 @@ search_result_nd* golden_ratio(
     const uint64_t max_iterations
 ) {
     #ifdef __DEBUG__
-        std::cout << "Called multi dimensional golden_ratio method with parameters:\nleft = ";
-        custom_vector_print(std::cout, left); 
-        std::cout << ";\nright = ";
-        custom_vector_print(std::cout, right); 
-        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+        std::cout << "Called multi dimensional golden_ratio method with parameters:\nleft = " << left << ";\nright = " << right 
+        << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
     #endif
 
-    search_result_nd* statistic = new search_result_nd();
-    statistic->type = search_method_type_nd::ND_GOLDEN_RATIO;
+    search_result_nd statistic;
+    statistic.type = search_method_type_nd::ND_GOLDEN_RATIO;
 
     Eigen::VectorXd lhs(left), rhs(right);
 
@@ -81,13 +73,10 @@ search_result_nd* golden_ratio(
     double y_r = function_nd(x_r);
     double y_l = function_nd(x_l);
 
-    while (statistic->iterations != max_iterations && (statistic->accuracy = distance(lhs, rhs)) > 2 * eps) {
+    while (statistic.iterations != max_iterations && (statistic.accuracy = distance(lhs, rhs)) > 2.0 * eps) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": left = ";
-            custom_vector_print(std::cout, lhs);  
-            std::cout << "; right = "; 
-            custom_vector_print(std::cout, rhs);
-            std::cout << "; accuracy = " << statistic->accuracy << '\n';
+            std::cout << "Iteration #" << statistic.iterations + 1 << ": left = " << lhs << "; right = " << rhs
+            << "; accuracy = " << statistic.accuracy << '\n';
         #endif
 
         if (y_l > y_r) {
@@ -104,64 +93,55 @@ search_result_nd* golden_ratio(
             y_l = function_nd(x_l);
         }
 
-        ++statistic->iterations;
+        ++statistic.iterations;
     }
 
 
-    statistic->function_probes = statistic->iterations + 2;
-    statistic->result = (lhs + rhs) * 0.5;
+    statistic.function_probes = statistic.iterations + 2;
+    statistic.result = (lhs + rhs) * 0.5;
+    statistic.accuracy *= 0.5;
 
     return statistic;
 }
 
 
-search_result_nd* fibonacchi(
+search_result_nd fibonacchi(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& left, 
     const Eigen::VectorXd& right, 
     const double eps
 ) {
     #ifdef __DEBUG__
-        std::cout << "Called multi dimensional fibonacchi with parameters:\nleft = ";
-        custom_vector_print(std::cout, left); 
-        std::cout << ";\nright = ";
-        custom_vector_print(std::cout, right); 
-        std::cout << ";\neps =" << eps << '\n';
+        std::cout << "Called multi dimensional fibonacchi with parameters:\nleft = " << left << ";\nright = " << right 
+        << ";\neps =" << eps << '\n';
     #endif
 
-    search_result_nd* statistic = new search_result_nd();
-    statistic->type = search_method_type_nd::ND_FIBONACCHI;
+    search_result_nd statistic;
+    statistic.type = search_method_type_nd::ND_FIBONACCHI;
 
     Eigen::VectorXd lhs(left), rhs(right);
 
-    uint64_t fib_temp = 0, fib_1 = 1, fib_2 = 1;
+    double fib_1 = 1, fib_2 = 1;
     double threshold = distance(rhs, lhs) / eps;
 
     while (fib_2 < threshold) {
-        fib_temp = fib_1;
-        fib_1 = fib_2;
-        fib_2 += fib_temp;
-        ++statistic->iterations;
+        fib_next(fib_1, fib_2);
+        ++statistic.iterations;
     }
 
-    Eigen::VectorXd x_r = left + static_cast<double>(fib_1) / fib_2 * (rhs - lhs);
-    Eigen::VectorXd x_l = left + static_cast<double>(fib_2 - fib_1) / fib_2 * (rhs - lhs);
+    Eigen::VectorXd x_r = left + fib_1 * (rhs - lhs) / fib_2;
+    Eigen::VectorXd x_l = left + (fib_2 - fib_1) * (rhs - lhs) / fib_2;
 
     double y_r = function_nd(x_r);
     double y_l = function_nd(x_l);
 
-    for (uint64_t iterations = statistic->iterations; iterations > 0; --iterations) {
+    for (uint64_t iterations = statistic.iterations; iterations > 0; --iterations) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations - iterations + 1 << ": left = ";
-            custom_vector_print(std::cout, lhs);  
-            std::cout << "; right = "; 
-            custom_vector_print(std::cout, rhs);
-            std::cout << "; accuracy = " << distance(rhs, lhs) / 2 << '\n';
+            std::cout << "Iteration #" << statistic.iterations - iterations + 1 << ": left = " << lhs << "; right = " << rhs
+            << "; accuracy = " << statistic.accuracy << '\n';
         #endif
 
-        fib_temp = fib_2 - fib_1;
-        fib_2 = fib_1;
-        fib_1 = fib_temp;
+        fib_prev(fib_1, fib_2);
 
         if (y_l > y_r) {
             lhs = x_l;
@@ -178,14 +158,14 @@ search_result_nd* fibonacchi(
         }
     }
 
-    statistic->result = (lhs + rhs) * 0.5;
-    statistic->accuracy = distance(rhs, lhs) / 2;
-    statistic->function_probes = statistic->iterations + 2;
+    statistic.result = (lhs + rhs) * 0.5;
+    statistic.accuracy = distance(rhs, lhs) * 0.5;
+    statistic.function_probes = statistic.iterations + 2;
 
     return statistic;
 }
 
-search_result_nd* per_coord_descend(
+search_result_nd per_coord_descend(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& start, 
     const double step,
@@ -193,13 +173,12 @@ search_result_nd* per_coord_descend(
     const uint64_t max_iterations
 ) {
     #ifdef __DEBUG__
-        std::cout << "Called multi dimensional per_coord_descend method with parameters:\nstart = ";
-        custom_vector_print(std::cout, start); 
-        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+        std::cout << "Called multi dimensional per_coord_descend method with parameters:\nstart = " << start 
+        << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
     #endif
 
-    search_result_nd* statistic = new search_result_nd();
-    statistic->type = search_method_type_nd::PER_COORD_DESCEND;
+    search_result_nd statistic;
+    statistic.type = search_method_type_nd::PER_COORD_DESCEND;
 
     Eigen::VectorXd x_0(start), x_1(start);
 
@@ -207,11 +186,7 @@ search_result_nd* per_coord_descend(
     double x_i;
     for (iteration = 0; iteration < max_iterations; ++iteration) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << iteration + 1 << ": left = ";
-            custom_vector_print(std::cout, x_0);  
-            std::cout << "; right = "; 
-            custom_vector_print(std::cout, x_1);
-            std::cout << '\n';
+            std::cout << "Iteration #" << iteration + 1 << ": left = " << x_0 << "; right = " << x_1 << '\n';
         #endif
         coord_i = iteration % start.size();
 
@@ -229,16 +204,14 @@ search_result_nd* per_coord_descend(
         
         x_i = x_0[coord_i];
 
-        std::cout.setstate(std::ios_base::failbit);
         auto sub_statistic = fibonacchi(function_nd, x_0, x_1, eps);
-        std::cout.clear();
 
-        statistic->result = sub_statistic->result;
-        statistic->accuracy = sub_statistic->accuracy;
-        statistic->iterations += sub_statistic->iterations;
-        statistic->function_probes += sub_statistic->function_probes + 2;
+        statistic.result = sub_statistic.result;
+        statistic.accuracy = sub_statistic.accuracy;
+        statistic.iterations += sub_statistic.iterations;
+        statistic.function_probes += sub_statistic.function_probes + 2;
 
-        x_0 = sub_statistic->result;
+        x_0 = sub_statistic.result;
     
         if (std::abs(x_0[coord_i] - x_i) < 2.0 * eps) {
             ++optimized_coord_count;
@@ -248,12 +221,12 @@ search_result_nd* per_coord_descend(
             }
         }
     }
-    statistic->iterations = iteration;
+    statistic.iterations = iteration;
 
     return statistic;
 }
 
-search_result_nd* gradient_descend(
+search_result_nd gradient_descend(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& start, 
     const double eps, 
@@ -261,90 +234,75 @@ search_result_nd* gradient_descend(
 ) {
 
     #ifdef __DEBUG__
-        std::cout << "Called multi dimensional gradient_descend method with parameters:\nstart = ";
-        custom_vector_print(std::cout, start); 
-        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+        std::cout << "Called multi dimensional gradient_descend method with parameters:\nstart = " << start 
+        << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
     #endif
-    search_result_nd* statistic = new search_result_nd();
-    statistic->type = search_method_type_nd::GRADIENT_DESCEND;
+    search_result_nd statistic;
+    statistic.type = search_method_type_nd::GRADIENT_DESCEND;
 
     Eigen::VectorXd curr(start.size()), prev(start), grad(start.size());
 
-    for (; statistic->iterations != max_iterations; ++statistic->iterations) {
+    for (; statistic.iterations != max_iterations; ++statistic.iterations) {
         grad = gradient(function_nd, prev);
         curr = prev - grad;
 
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": curr = ";
-            custom_vector_print(std::cout, curr);
-            std::cout << ", prev = ";
-            custom_vector_print(std::cout, prev);
-            std::cout << ", gradient = ";
-            custom_vector_print(std::cout, grad);
-            std::cout << '\n';
+            std::cout << "Iteration #" << statistic.iterations + 1 << ": curr = " << curr << ", prev = " << prev << ", gradient = " << grad << '\n';
         #endif
 
-        std::cout.setstate(std::ios_base::failbit);
         auto sub_statistic = fibonacchi(function_nd, prev, curr, eps);
-        std::cout.clear();
 
-        curr = sub_statistic->result;
-        statistic->iterations += sub_statistic->iterations;
-        statistic->function_probes += sub_statistic->function_probes + 2;
+        curr = sub_statistic.result;
+        statistic.iterations += sub_statistic.iterations;
+        statistic.function_probes += sub_statistic.function_probes + 2;
 
-        if ((statistic->accuracy = distance(prev, curr)) < 2.0 * eps) {
+        if ((statistic.accuracy = distance(prev, curr)) < 2.0 * eps) {
             break;
         }
 
         prev = curr;
     }
 
-    statistic->result = (prev + curr) * 0.5;
+    statistic.result = (prev + curr) * 0.5;
+    statistic.accuracy *= 0.5;
 
     return statistic;
 }
 
-search_result_nd* conj_gradient_descend(
+search_result_nd conj_gradient_descend(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& start, 
     const double eps, 
     const uint64_t max_iterations
 ) {
     #ifdef __DEBUG__
-        std::cout << "Called multi dimensional conjugate_gradient_descend method with parameters:\nstart = ";
-        custom_vector_print(std::cout, start); 
-        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+        std::cout << "Called multi dimensional conjugate_gradient_descend method with parameters:\nstart = " << start 
+        << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
     #endif
-    search_result_nd* statistic = new search_result_nd();
-    statistic->type = search_method_type_nd::CONJ_GRADIENT_DESCEND;
+    search_result_nd statistic;
+    statistic.type = search_method_type_nd::CONJ_GRADIENT_DESCEND;
 
     Eigen::VectorXd curr(start.size()), prev(start);
     Eigen::VectorXd curr_s, prev_s = -1.0 * gradient(function_nd, prev);
 
     double omega;
 
-    for (; statistic->iterations != max_iterations; ++statistic->iterations) {
+    for (; statistic.iterations != max_iterations; ++statistic.iterations) {
         curr = prev + prev_s;
 
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": curr = ";
-            custom_vector_print(std::cout, curr);
-            std::cout << ", prev = ";
-            custom_vector_print(std::cout, prev);
-            std::cout << '\n';
+            std::cout << "Iteration #" << statistic.iterations + 1 << ": curr = " << curr << ", prev = " << prev << '\n';
         #endif
 
-        if ((statistic->accuracy = distance(prev, curr)) < 2.0 * eps) {
+        if ((statistic.accuracy = distance(prev, curr)) < 2.0 * eps) {
             break;
         }
 
-        std::cout.setstate(std::ios_base::failbit);
         auto sub_statistic = fibonacchi(function_nd, prev, curr, eps);
-        std::cout.clear();
 
-        curr = sub_statistic->result;
-        statistic->iterations += sub_statistic->iterations;
-        statistic->function_probes += sub_statistic->function_probes + 2;
+        curr = sub_statistic.result;
+        statistic.iterations += sub_statistic.iterations;
+        statistic.function_probes += sub_statistic.function_probes + 2;
 
         curr_s = gradient(function_nd, curr);
         omega = curr_s.norm() / prev_s.norm();
@@ -353,52 +311,47 @@ search_result_nd* conj_gradient_descend(
         prev = curr;
     }
 
-    statistic->result = (prev + curr) * 0.5;
+    statistic.result = (prev + curr) * 0.5;
+    statistic.accuracy *= 0.5;
 
     return statistic;
 }
 
-search_result_nd* newtone_raphson(
+search_result_nd newtone_raphson(
     const std::function<double(const Eigen::VectorXd)> function_nd, 
     const Eigen::VectorXd& start, 
     const double eps, 
     const uint64_t max_iterations
 ) {
     #ifdef __DEBUG__
-        std::cout << "Called multi dimensional newtone_raphson method with parameters:\nstart = ";
-        custom_vector_print(std::cout, start); 
-        std::cout << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
+        std::cout << "Called multi dimensional newtone_raphson method with parameters:\nstart = " << start 
+        << ";\neps =" << eps << ";\nmax_iterations = " << max_iterations << '\n';
     #endif
 
-    search_result_nd* statistic = new search_result_nd();
-    statistic->type = search_method_type_nd::NEWTONE_RAPHSON;
+    search_result_nd statistic;
+    statistic.type = search_method_type_nd::NEWTONE_RAPHSON;
 
     Eigen::VectorXd curr, prev(start), grad;
     Eigen::MatrixXd hess(start.size(), start.size());
 
-    for (; statistic->iterations != max_iterations; ++statistic->iterations) {
+    for (; statistic.iterations != max_iterations; ++statistic.iterations) {
         grad = gradient(function_nd, prev);
         hess = hessian(function_nd, prev).inverse();
         curr = prev - (hess * grad);
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << statistic->iterations + 1 << ": curr = ";
-            custom_vector_print(std::cout, curr);
-            std::cout << ", prev = ";
-            custom_vector_print(std::cout, prev);
-            std::cout << ", gradient = ";
-            custom_vector_print(std::cout, grad);
-            std::cout << '\n';
+            std::cout << "Iteration #" << statistic.iterations + 1 << ": curr = " << curr << ", prev = " << prev << ", gradient = " << grad << '\n';
         #endif
 
-        if ((statistic->accuracy = distance(prev, curr)) < 2.0 * eps) {
+        if ((statistic.accuracy = distance(prev, curr)) < 2.0 * eps) {
             break;
         }
 
         prev = curr;
     }
 
-    statistic->result = (prev + curr) * 0.5;
-    statistic->function_probes = statistic->iterations * 2 * start.size() * (start.size() + 2);
+    statistic.result = (prev + curr) * 0.5;
+    statistic.accuracy *= 0.5;
+    statistic.function_probes = statistic.iterations * 2 * start.size() * (start.size() + 2);
 
     return statistic;
 }
