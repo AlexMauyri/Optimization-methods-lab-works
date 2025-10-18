@@ -180,7 +180,7 @@ search_result_nd per_coord_descend(
     search_result_nd statistic;
     statistic.type = search_method_type_nd::PER_COORD_DESCEND;
 
-    Eigen::VectorXd x_0(start), x_1(start);
+    Eigen::VectorXd x_0(start), ort = Eigen::VectorXd::Zero(start.size());
 
     uint64_t coord_i, iteration, optimized_coord_count = 0;
     double x_i;
@@ -189,39 +189,38 @@ search_result_nd per_coord_descend(
             std::cout << "Iteration #" << iteration + 1 << ": left = " << x_0 << "; right = " << x_1 << '\n';
         #endif
         coord_i = iteration % start.size();
+        ort[coord_i] = 1;
 
-        x_1[coord_i] -= eps;
-        double y_0 = function_nd(x_1);
-        x_1[coord_i] += 2.0 * eps;
-        double y_1 = function_nd(x_1);
-        x_1[coord_i] -= eps;
-
-        if (y_0 > y_1) {
-            x_1[coord_i] += step;
+        if (function_nd(x_0 - eps * ort) > function_nd(x_0 + eps * ort)) {
+            ort[coord_i] = step;
         } else {
-            x_1[coord_i] -= step;
+            ort[coord_i] = -step;
         }
         
         x_i = x_0[coord_i];
 
-        auto sub_statistic = fibonacchi(function_nd, x_0, x_1, eps);
-
-        statistic.result = sub_statistic.result;
-        statistic.accuracy = sub_statistic.accuracy;
-        statistic.iterations += sub_statistic.iterations;
-        statistic.function_probes += sub_statistic.function_probes + 2;
+        auto sub_statistic = fibonacchi(function_nd, x_0, x_0 + ort, eps);
 
         x_0 = sub_statistic.result;
+        statistic.iterations += sub_statistic.iterations;
+        statistic.function_probes += sub_statistic.function_probes + 2;
     
         if (std::abs(x_0[coord_i] - x_i) < 2.0 * eps) {
             ++optimized_coord_count;
             
             if (optimized_coord_count == start.size()) {
+                statistic.result = x_0;
+                statistic.accuracy = sub_statistic.accuracy;
                 break;
             }
+        } else {
+            optimized_coord_count = 0;
         }
+
+        ort[coord_i] = 0;
     }
-    statistic.iterations = iteration;
+    
+    statistic.iterations += iteration;
 
     return statistic;
 }

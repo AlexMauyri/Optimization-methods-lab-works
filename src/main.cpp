@@ -52,9 +52,9 @@ void lab3(std::function<double(const Eigen::VectorXd&)> function_nd) {
 }
 
 int main() {
-    lab1(test_func);
+    //lab1(test_func);
     lab2(test_func_2);
-    lab3(test_func_2);
+    //lab3(test_func_2);
     
 
     return 0;
