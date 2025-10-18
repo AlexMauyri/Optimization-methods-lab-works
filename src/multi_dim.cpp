@@ -202,6 +202,8 @@ search_result_nd per_coord_descend(
         auto sub_statistic = fibonacchi(function_nd, x_0, x_0 + ort, eps);
 
         x_0 = sub_statistic.result;
+        statistic.result = x_0;
+        statistic.accuracy = sub_statistic.accuracy;
         statistic.iterations += sub_statistic.iterations;
         statistic.function_probes += sub_statistic.function_probes + 2;
     
@@ -209,8 +211,6 @@ search_result_nd per_coord_descend(
             ++optimized_coord_count;
             
             if (optimized_coord_count == start.size()) {
-                statistic.result = x_0;
-                statistic.accuracy = sub_statistic.accuracy;
                 break;
             }
         } else {
