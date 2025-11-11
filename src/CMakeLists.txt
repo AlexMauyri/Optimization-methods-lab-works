@@ -1,4 +1,4 @@
-add_executable(${PROJECT_NAME} main.cpp one_dim.cpp numerics.cpp multi_dim.cpp search_result_nd.cpp search_result.cpp PenaltyFunction.cpp InnerPenaltyFunction.cpp OuterPenaltyFunction.cpp)
+add_executable(${PROJECT_NAME} main.cpp one_dim.cpp numerics.cpp multi_dim.cpp search_result_nd.cpp search_result.cpp)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)
 

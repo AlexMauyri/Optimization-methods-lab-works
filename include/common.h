@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Eigen/Dense>
+
 #define PHI 1.61803398874989484820
 #define PSI 0.61803398874989484820
 
@@ -9,3 +11,5 @@
 #define PER_COORD_DESCEND_STEP  2.0
 #define ACCURACY                1e-6
 #define ITERS_MAX               50
+
+using function_nd = std::function<double(const Eigen::VectorXd&)>;

@@ -12,8 +12,6 @@
 #include "InnerPenaltyFunction.h"
 #include "OuterPenaltyFunction.h"
 
-using target_function_nd = std::function<double(const Eigen::VectorXd&)>;
-
 double test_func(const double x) {
 	return (x - 1) * (x - 5); //3
 }
@@ -43,7 +41,7 @@ void lab1(const std::function<double(double)> function) {
     std::cout << fibonacchi(function, x0, x1, ACCURACY + 2e-7) << '\n';
 }
 
-void lab2(target_function_nd function_nd) {
+void lab2(function_nd function_nd) {
     Eigen::VectorXd x_0(2);
 	Eigen::VectorXd x_1(2);
 
@@ -59,18 +57,18 @@ void lab2(target_function_nd function_nd) {
 	std::cout << per_coord_descend(function_nd, start) << '\n';
 }
 
-void lab3(target_function_nd function_nd) {
+void lab3(function_nd function_nd) {
     Eigen::VectorXd start(2);
     start << -14, -33.98;
 
     std::cout << gradient_descend(function_nd, start) << '\n';
     std::cout << conj_gradient_descend(function_nd, start) << '\n';
-    std::cout << newtone_raphson(function_nd, start) << '\n';
+    std::cout << newton(function_nd, start) << '\n';
 
     start[0] = -12.0;
     start[1] = -15.0;
    
-    std::cout << newtone_raphson(function_nd, start) << '\n';
+    std::cout << newton(function_nd, start) << '\n';
 
     InnerPenaltyFunction penalty_function1 = InnerPenaltyFunction(test_func_2);
     penalty_function1.add_inequality(psi1);

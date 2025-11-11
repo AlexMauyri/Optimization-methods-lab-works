@@ -11,7 +11,7 @@ enum search_method_type_nd {
     PER_COORD_DESCEND,
     GRADIENT_DESCEND,
     CONJ_GRADIENT_DESCEND,
-    NEWTONE_RAPHSON,
+    NEWTON,
     ND_NONE
 };
 
