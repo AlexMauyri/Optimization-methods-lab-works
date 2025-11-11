@@ -4,8 +4,10 @@
 #include "search_result_nd.h"
 #include "numerics.h"
 
+using target_function_nd = std::function<double(const Eigen::VectorXd&)>;
+
 search_result_nd bisect(
-    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    target_function_nd function_nd, 
     const Eigen::VectorXd& left, 
     const Eigen::VectorXd& right, 
     const double eps, 
@@ -49,9 +51,8 @@ search_result_nd bisect(
     return statistic;
 }
 
-
 search_result_nd golden_ratio(
-    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    target_function_nd function_nd, 
     const Eigen::VectorXd& left, 
     const Eigen::VectorXd& right, 
     const double eps, 
@@ -96,7 +97,6 @@ search_result_nd golden_ratio(
         ++statistic.iterations;
     }
 
-
     statistic.function_probes = statistic.iterations + 2;
     statistic.result = (lhs + rhs) * 0.5;
     statistic.accuracy *= 0.5;
@@ -104,9 +104,8 @@ search_result_nd golden_ratio(
     return statistic;
 }
 
-
 search_result_nd fibonacchi(
-    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    target_function_nd function_nd, 
     const Eigen::VectorXd& left, 
     const Eigen::VectorXd& right, 
     const double eps
@@ -147,13 +146,13 @@ search_result_nd fibonacchi(
             lhs = x_l;
             x_l = x_r;
             y_l = y_r;
-            x_r = lhs + static_cast<double>(fib_1) / fib_2 * (rhs - lhs);
+            x_r = lhs + fib_1 / fib_2 * (rhs - lhs);
             y_r = function_nd(x_r);
         } else {
             rhs = x_r;
             x_r = x_l;
             y_r = y_l;
-            x_l = lhs + static_cast<double>(fib_2 - fib_1) / fib_2 * (rhs - lhs);
+            x_l = lhs + (fib_2 - fib_1) / fib_2 * (rhs - lhs);
             y_l = function_nd(x_l);
         }
     }
@@ -166,7 +165,7 @@ search_result_nd fibonacchi(
 }
 
 search_result_nd per_coord_descend(
-    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    target_function_nd function_nd, 
     const Eigen::VectorXd& start, 
     const double step,
     const double eps, 
@@ -203,11 +202,10 @@ search_result_nd per_coord_descend(
 
         x_0 = sub_statistic.result;
         statistic.result = x_0;
-        statistic.accuracy = sub_statistic.accuracy;
         statistic.iterations += sub_statistic.iterations;
         statistic.function_probes += sub_statistic.function_probes + 2;
     
-        if (std::abs(x_0[coord_i] - x_i) < 2.0 * eps) {
+        if ((statistic.accuracy = std::abs(x_0[coord_i] - x_i)) < 2.0 * eps) {
             ++optimized_coord_count;
             
             if (optimized_coord_count == start.size()) {
@@ -221,12 +219,13 @@ search_result_nd per_coord_descend(
     }
     
     statistic.iterations += iteration;
+    statistic.accuracy *= 0.5;
 
     return statistic;
 }
 
 search_result_nd gradient_descend(
-    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    target_function_nd function_nd, 
     const Eigen::VectorXd& start, 
     const double eps, 
     const uint64_t max_iterations
@@ -269,7 +268,7 @@ search_result_nd gradient_descend(
 }
 
 search_result_nd conj_gradient_descend(
-    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    target_function_nd function_nd, 
     const Eigen::VectorXd& start, 
     const double eps, 
     const uint64_t max_iterations
@@ -317,7 +316,7 @@ search_result_nd conj_gradient_descend(
 }
 
 search_result_nd newtone_raphson(
-    const std::function<double(const Eigen::VectorXd)> function_nd, 
+    target_function_nd function_nd, 
     const Eigen::VectorXd& start, 
     const double eps, 
     const uint64_t max_iterations
