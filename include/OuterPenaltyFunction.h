@@ -58,19 +58,19 @@ public:
     explicit OuterPenaltyFunction(const function_nd& target_function) noexcept 
         : PenaltyFunction(target_function) {}
 
-    OuterPenaltyFunction(const OuterPenaltyFunction& other) noexcept 
+    OuterPenaltyFunction(const OuterPenaltyFunction& other) 
         : PenaltyFunction(other)
         , equalities(other.getEqualities()) {}
 
     OuterPenaltyFunction(OuterPenaltyFunction&& other) noexcept 
         : PenaltyFunction(std::move(other))
-        , equalities(other.getEqualities()) {}
+        , equalities(std::move(other.equalities)) {}
 
     ~OuterPenaltyFunction() { equalities.clear(); }
 
-    OuterPenaltyFunction& operator=(const OuterPenaltyFunction& other) noexcept {
+    OuterPenaltyFunction& operator=(const OuterPenaltyFunction& other) {
         if (this != &other) {
-            this->equalities = other.equalities;
+            this->equalities = other.getEqualities();
             PenaltyFunction::operator=(other);
         }
         return *this;
@@ -78,19 +78,19 @@ public:
 
     OuterPenaltyFunction& operator=(OuterPenaltyFunction&& other) noexcept {
         if (this != &other) {
-            this->equalities = other.equalities;
+            this->equalities = std::move(other.equalities);
             PenaltyFunction::operator=(std::move(other));
         }
         return *this;
     }
 
-    inline size_t getAmountOfEqualities() const { return equalities.size(); }
+    inline size_t getAmountOfEqualities() const noexcept { return equalities.size(); }
 
-    inline const std::vector<function_nd>& getEqualities() const { return equalities; }
+    inline const std::vector<function_nd>& getEqualities() const noexcept { return equalities; }
 
     inline void addEquality(function_nd equality) { equalities.push_back(equality); }
 
-    inline void deleteEquality(size_t index) {
+    void deleteEquality(size_t index) {
         if (index >= equalities.size()) {
             throw std::out_of_range("Given index is out of range.");
         }

@@ -16,6 +16,8 @@ enum class InequalityValueFunction {INVERSE, LOG_NATURAL};
 
 class InnerPenaltyFunction final : public PenaltyFunction {
 private:
+    static constexpr double EPSILON { 1e-10 };
+
     AggregatingFunction     agg_func;
     InequalityValueFunction ineq_value_func;
 
@@ -46,16 +48,14 @@ private:
         return inequality_values;
     }
 
-    double inequalityValueTransform(double value) const {
-        constexpr double epsilon {1e-10};
-
+    double inequalityValueTransform(double value) const noexcept {
         switch (this->ineq_value_func) {
             case InequalityValueFunction::INVERSE: 
-                if (std::abs(value) < epsilon) return std::copysign(1.0 / epsilon, value);
+                if (std::abs(value) < EPSILON) return std::copysign(1.0 / (EPSILON + value), value);
                 else return 1.0 / value;
             case InequalityValueFunction::LOG_NATURAL:
-                if (value < epsilon) return std::log(epsilon);
-                else return std::log(value);
+                if (value < EPSILON) return -std::log(EPSILON);
+                else return -std::log(value);
         }
     }
 public:
@@ -68,19 +68,19 @@ public:
         , agg_func(agg_func)
         , ineq_value_func(ineq_value_func) {}
 
-    InnerPenaltyFunction(const InnerPenaltyFunction& other) noexcept
+    InnerPenaltyFunction(const InnerPenaltyFunction& other)
         : PenaltyFunction(other)
         , agg_func(other.getAggregatingFunction())
         , ineq_value_func(other.getInequalityValueFunction()) {}
 
     InnerPenaltyFunction(InnerPenaltyFunction&& other) noexcept
         : PenaltyFunction(std::move(other))
-        , agg_func(other.getAggregatingFunction())
-        , ineq_value_func(other.getInequalityValueFunction()) {}
+        , agg_func(std::move(other.agg_func))
+        , ineq_value_func(std::move(other.ineq_value_func)) {}
 
-    ~InnerPenaltyFunction() {}
+    ~InnerPenaltyFunction() = default;
 
-    InnerPenaltyFunction& operator=(const InnerPenaltyFunction& other) noexcept {
+    InnerPenaltyFunction& operator=(const InnerPenaltyFunction& other) {
         if (this != &other) {
             this->agg_func = other.getAggregatingFunction();
             this->ineq_value_func = other.getInequalityValueFunction();
@@ -91,8 +91,8 @@ public:
 
     InnerPenaltyFunction& operator=(InnerPenaltyFunction&& other) noexcept {
         if (this != &other) {
-            this->agg_func = other.getAggregatingFunction();
-            this->ineq_value_func = other.getInequalityValueFunction();
+            this->agg_func = std::move(other.agg_func);
+            this->ineq_value_func = std::move(other.ineq_value_func);
             PenaltyFunction::operator=(std::move(other));
         }
         return *this;
