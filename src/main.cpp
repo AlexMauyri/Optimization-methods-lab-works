@@ -71,18 +71,17 @@ void lab3(function_nd function_nd) {
     std::cout << newton(function_nd, start) << '\n';
 
     InnerPenaltyFunction penalty_function1 = InnerPenaltyFunction(test_func_2);
-    penalty_function1.add_inequality(psi1);
-    penalty_function1.add_inequality(psi2);
+    penalty_function1.addInequality(psi1);
+    penalty_function1.addInequality(psi2);
 
-    std::cout << penalty_function1.compute_minimum(start) << '\n';
+    std::cout << penalty_function1.computeMinimum(start) << '\n';
 
     OuterPenaltyFunction penalty_function2 = OuterPenaltyFunction(test_func_2);
-    penalty_function2.add_inequality(psi1);
-    penalty_function2.add_inequality(psi2);
-    penalty_function2.add_equality(phi1);
+    penalty_function2.addInequality(psi1);
+    penalty_function2.addInequality(psi2);
+    penalty_function2.addEquality(phi1);
 
-    std::cout << penalty_function2.compute_minimum(start) << '\n';
-
+    std::cout << penalty_function2.computeMinimum(start) << '\n';
 }
 
 int main() {

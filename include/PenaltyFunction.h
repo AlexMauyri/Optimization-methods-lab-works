@@ -10,27 +10,60 @@
 class PenaltyFunction {
 private:
     const function_nd penalty_func = [this](const Eigen::VectorXd& x) {
-        return this->target_function_with_penalty(x);
+        return this->computeTargetFunctionWithPenalty(x);
     };
 protected:
-    function_nd target_function;
-    std::vector<function_nd> inequalities;
+    function_nd                 target_function;
+    std::vector<function_nd>    inequalities;
 
-    virtual double target_function_with_penalty(const Eigen::VectorXd& start) const = 0;
+    virtual double computeTargetFunctionWithPenalty(const Eigen::VectorXd& start) const = 0;
 public:
-    PenaltyFunction(function_nd target_function) : target_function(std::move(target_function)) {}
+    explicit PenaltyFunction(const function_nd& target_function) noexcept
+        : target_function(target_function) {}
 
-    inline size_t amount_of_inequalities() const noexcept { return inequalities.size(); }
+    PenaltyFunction(const PenaltyFunction& other) noexcept 
+        : target_function(other.getTargetFunction())
+        , inequalities(other.getInequalities()) {}
 
-    inline search_result_nd compute_minimum(const Eigen::VectorXd& start, 
-                                            const double eps=N_DIM_ACCURACY, 
-                                            const uint64_t max_iterations=N_DIM_ITERS_MAX) const {
+    PenaltyFunction(PenaltyFunction&& other) noexcept 
+        : target_function(other.getTargetFunction())
+        , inequalities(other.getInequalities()) {}
+
+    ~PenaltyFunction() { inequalities.clear(); }
+    
+    PenaltyFunction& operator=(const PenaltyFunction& other) noexcept {
+        if (this != &other) {
+            this->target_function = other.getTargetFunction();
+            this->inequalities.assign(other.getInequalities().begin(), other.getInequalities().end());
+        }
+        return *this;
+    }
+
+    PenaltyFunction& operator=(PenaltyFunction&& other) noexcept {
+        if (this != &other) {
+            this->target_function = other.getTargetFunction();
+            this->inequalities.assign(other.getInequalities().begin(), other.getInequalities().end());
+        }
+        return *this;
+    }
+
+    search_result_nd computeMinimum(const Eigen::VectorXd& start, 
+                                    const double eps = N_DIM_ACCURACY, 
+                                    const uint64_t max_iterations = N_DIM_ITERS_MAX) const {
         return newton(penalty_func, start, eps, max_iterations);
     }
 
-    inline void add_inequality(function_nd inequality) { inequalities.push_back(inequality); }
+    inline size_t getAmountOfInequalities() const noexcept { return inequalities.size(); }
 
-    inline void delete_inequality(size_t index) {
+    inline function_nd getTargetFunction() const { return target_function; }
+
+    inline const std::vector<function_nd>& getInequalities() const { return inequalities; }
+
+    inline void setTargetFunction(function_nd target_function) { this->target_function = target_function; }
+
+    inline void addInequality(function_nd inequality) { inequalities.push_back(inequality); }
+
+    inline void deleteInequality(size_t index) {
         if (index >= inequalities.size()) {
             throw std::out_of_range("Given index is out of range.");
         }
@@ -38,9 +71,5 @@ public:
         inequalities.erase(inequalities.begin() + index);
     }
 
-    inline const std::vector<function_nd>& get_inequalities() const { return inequalities; }
-
-    inline void clear_inequalities() noexcept { inequalities.clear(); }
-
-    virtual ~PenaltyFunction() = default;
+    inline void clearInequalities() noexcept { inequalities.clear(); }
 };

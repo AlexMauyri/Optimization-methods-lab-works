@@ -11,60 +11,96 @@
 #include "search_result_nd.h"
 #include "common.h"
 
-enum class aggregating_function {SUM, MAX, MIN};
-enum class inequality_value_function {INVERSE, LOG_NATURAL};
+enum class AggregatingFunction {SUM, MAX, MIN};
+enum class InequalityValueFunction {INVERSE, LOG_NATURAL};
 
-class InnerPenaltyFunction : public PenaltyFunction {
+class InnerPenaltyFunction final : public PenaltyFunction {
 private:
-    double target_function_with_penalty(const Eigen::VectorXd& start) const override { return target_function(start) + inner_penalty(start); }
+    AggregatingFunction     agg_func;
+    InequalityValueFunction ineq_value_func;
 
-    double inequality_value_transform(double value) const {
-        constexpr double epsilon = 1e-10;
+    double computeTargetFunctionWithPenalty(const Eigen::VectorXd& start) const override { return target_function(start) + innerPenalty(start); }
 
-        switch (this->ineq_value_func) {
-            case inequality_value_function::INVERSE: 
-                if (std::abs(value) < epsilon) return std::copysign(1.0 / epsilon, value);
-                else return 1.0 / value;
-            case inequality_value_function::LOG_NATURAL:
-                if (value < epsilon) return std::log(epsilon);
-                else return std::log(value);
-            default: throw std::invalid_argument("Unknown type of inequality value function.");
-        }
-    }
-
-    double inner_penalty(const Eigen::VectorXd& start) const {
+    double innerPenalty(const Eigen::VectorXd& start) const {
         if (inequalities.empty()) {
             return 0.0;
         }
 
+        const std::vector<double> inequality_values = transformInequalities(start);
+
+        switch (this->agg_func) {
+            case AggregatingFunction::SUM: return std::accumulate(inequality_values.begin(), inequality_values.end(), 0.0);
+            case AggregatingFunction::MAX: return *std::max_element(inequality_values.begin(), inequality_values.end());
+            case AggregatingFunction::MIN: return *std::min_element(inequality_values.begin(), inequality_values.end());
+        }
+    }
+
+    const std::vector<double> transformInequalities(const Eigen::VectorXd& start) const {
         std::vector<double> inequality_values;
         inequality_values.reserve(inequalities.size());
         
         for (const auto& inequality : inequalities) {
-            inequality_values.push_back(inequality_value_transform(inequality(start)));
+            inequality_values.push_back(inequalityValueTransform(inequality(start)));
         }
 
-        switch (this->agg_func) {
-            case aggregating_function::SUM: return std::accumulate(inequality_values.begin(), inequality_values.end(), 0.0);
-            case aggregating_function::MAX: return *std::max_element(inequality_values.begin(), inequality_values.end());
-            case aggregating_function::MIN: return *std::min_element(inequality_values.begin(), inequality_values.end());
-            default: throw std::invalid_argument("Unknown type of aggregating function.");
-        }
+        return inequality_values;
     }
 
-    aggregating_function agg_func;
-    inequality_value_function ineq_value_func;
+    double inequalityValueTransform(double value) const {
+        constexpr double epsilon {1e-10};
+
+        switch (this->ineq_value_func) {
+            case InequalityValueFunction::INVERSE: 
+                if (std::abs(value) < epsilon) return std::copysign(1.0 / epsilon, value);
+                else return 1.0 / value;
+            case InequalityValueFunction::LOG_NATURAL:
+                if (value < epsilon) return std::log(epsilon);
+                else return std::log(value);
+        }
+    }
 public:
-    InnerPenaltyFunction(function_nd target_function, 
-                        aggregating_function agg_func = aggregating_function::SUM, 
-                        inequality_value_function ineq_value_func = inequality_value_function::INVERSE) 
-                        : PenaltyFunction(std::move(target_function))
-                        , agg_func(agg_func)
-                        , ineq_value_func(ineq_value_func) {}
+    explicit InnerPenaltyFunction(
+        const function_nd& target_function,
+        AggregatingFunction agg_func = AggregatingFunction::SUM,
+        InequalityValueFunction ineq_value_func = InequalityValueFunction::INVERSE
+    ) noexcept
+        : PenaltyFunction(target_function)
+        , agg_func(agg_func)
+        , ineq_value_func(ineq_value_func) {}
 
-    inline void set_aggregating_function(aggregating_function agg_func) noexcept {this->agg_func = agg_func;}
-    inline void set_inequality_value_function(inequality_value_function ineq_value_func) noexcept {this->ineq_value_func = ineq_value_func;}
+    InnerPenaltyFunction(const InnerPenaltyFunction& other) noexcept
+        : PenaltyFunction(other)
+        , agg_func(other.getAggregatingFunction())
+        , ineq_value_func(other.getInequalityValueFunction()) {}
 
-    inline aggregating_function get_aggregating_function() const noexcept { return agg_func; }
-    inline inequality_value_function get_inequality_value_function() const noexcept { return ineq_value_func; }
+    InnerPenaltyFunction(InnerPenaltyFunction&& other) noexcept
+        : PenaltyFunction(std::move(other))
+        , agg_func(other.getAggregatingFunction())
+        , ineq_value_func(other.getInequalityValueFunction()) {}
+
+    ~InnerPenaltyFunction() {}
+
+    InnerPenaltyFunction& operator=(const InnerPenaltyFunction& other) noexcept {
+        if (this != &other) {
+            this->agg_func = other.getAggregatingFunction();
+            this->ineq_value_func = other.getInequalityValueFunction();
+            PenaltyFunction::operator=(other);
+        }
+        return *this;
+    }
+
+    InnerPenaltyFunction& operator=(InnerPenaltyFunction&& other) noexcept {
+        if (this != &other) {
+            this->agg_func = other.getAggregatingFunction();
+            this->ineq_value_func = other.getInequalityValueFunction();
+            PenaltyFunction::operator=(std::move(other));
+        }
+        return *this;
+    }
+
+    inline AggregatingFunction getAggregatingFunction() const noexcept { return agg_func; }
+    inline InequalityValueFunction getInequalityValueFunction() const noexcept { return ineq_value_func; }
+
+    inline void setAggregatingFunction(AggregatingFunction agg_func) noexcept {this->agg_func = agg_func;}
+    inline void setInequalityValueFunction(InequalityValueFunction ineq_value_func) noexcept {this->ineq_value_func = ineq_value_func;}
 };
