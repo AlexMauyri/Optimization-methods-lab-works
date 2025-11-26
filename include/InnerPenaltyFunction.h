@@ -51,11 +51,11 @@ private:
     double inequalityValueTransform(double value) const noexcept {
         switch (this->ineq_value_func) {
             case InequalityValueFunction::INVERSE: 
-                if (std::abs(value) < EPSILON) return std::copysign(1.0 / (EPSILON + value), value);
-                else return 1.0 / value;
+                if (std::abs(value) < EPSILON) return 1.0 / (EPSILON + value * value);
+                else return 1.0 / (value * value);
             case InequalityValueFunction::LOG_NATURAL:
-                if (value < EPSILON) return -std::log(EPSILON);
-                else return -std::log(value);
+                if (std::abs(value) < EPSILON) return -std::log(EPSILON + value * value);
+                else return -std::log(value * value);
         }
     }
 public:
