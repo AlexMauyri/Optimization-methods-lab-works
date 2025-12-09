@@ -183,7 +183,7 @@ search_result_nd per_coord_descend(
     double x_i;
     for (iteration = 0; iteration < max_iterations; ++iteration) {
         #ifdef __DEBUG__
-            std::cout << "Iteration #" << iteration + 1 << ": left = " << x_0 << "; right = " << x_1 << '\n';
+            std::cout << "Iteration #" << iteration + 1 << ": left = " << x_0 << '\n';
         #endif
         coord_i = iteration % start.size();
         ort[coord_i] = 1;

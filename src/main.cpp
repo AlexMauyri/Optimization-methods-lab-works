@@ -11,6 +11,7 @@
 #include "numerics.h"
 #include "InnerPenaltyFunction.h"
 #include "OuterPenaltyFunction.h"
+#include "Simplex.h"
 
 double test_func(const double x) {
 	return (x - 1) * (x - 5); //3
@@ -84,11 +85,29 @@ void lab3(function_nd function_nd) {
     std::cout << penalty_function2.computeMinimum(start) << '\n';
 }
 
+void lab4() {
+    Eigen::VectorXi compareSigns(3);
+    Eigen::VectorXd pricesVector(2);
+    Eigen::VectorXd boundsVector(3);
+    Eigen::MatrixXd boundsMatrix(3, 2);
+
+    compareSigns << 0, 0, 0;
+    pricesVector << 2, 3;
+    boundsVector << 40, 28, 14;
+    boundsMatrix << -2, 6, 3, 2, 2, -1;
+
+    std::cout << "Starting Simplex method\n";
+
+    Simplex simplex {boundsMatrix, boundsVector, pricesVector, compareSigns};
+
+    std::cout << simplex.solve(ProblemType::MAX);
+}
+
 int main() {
     //lab1(test_func);
     //lab2(test_func_2);
-    lab3(test_func_2);
-    
+    //lab3(test_func_2);
+    lab4();
 
     return 0;
 }

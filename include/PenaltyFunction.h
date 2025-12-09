@@ -6,6 +6,7 @@
 
 #include "search_result_nd.h"
 #include "common.h"
+#include <memory>
 
 class PenaltyFunction {
 private:
@@ -18,6 +19,12 @@ protected:
 
     virtual double computeTargetFunctionWithPenalty(const Eigen::VectorXd& start) const = 0;
 public:
+    // template<typename PenaltyT, typename... Args>
+    // std::unique_ptr<PenaltyT> createPenalty(Args&&... args)
+    // {
+    //     return std::make_unique<PenaltyT>(std::forward<Args>(args)...);
+    // }   
+
     explicit PenaltyFunction(const function_nd& target_function) noexcept
         : target_function(target_function) {}
 
