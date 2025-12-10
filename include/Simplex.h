@@ -1,114 +1,59 @@
 #include <Eigen/Dense>
 #include <iostream>
 
-enum class CompareSign {LESS_EQUAL, EQUAL, GREATER_EQUAL};
-enum class ProblemType {MAX, MIN};
+#include "SimplexResult.h"
+#include "common.h"
 
-class Simplex {
+enum class CompareSign {LESS_EQUAL, EQUAL, GREATER_EQUAL};
+enum class SimplexStepCode {NEXT_STEP, NO_MAIN_COLUMN, NO_MAIN_ROW};
+
+class Simplex final {
 private:
-    static constexpr int SIMPLEX_MAX_ITERATIONS = 50;
+    static constexpr int    SIMPLEX_MAX_ITERATIONS = 50;
     static constexpr double SIMPLEX_ACCURACY       = 1e-6;
 
-    Eigen::VectorXi compareSigns;
-    Eigen::VectorXd pricesVector;
-    Eigen::VectorXd boundsVector;
-    Eigen::VectorXi basicVariableIndices;
-    Eigen::VectorXi naturalVariableIndices;
-    Eigen::VectorXi virtualVariableIndices;
+    Eigen::VectorXi         compareSigns;
+    Eigen::VectorXi         basicVariableIndices;
+    Eigen::VectorXi         naturalVariableIndices;
+    Eigen::VectorXi         virtualVariableIndices;
 
-    Eigen::MatrixXd simplexTable;
-    Eigen::MatrixXd boundsMatrix;
+    Eigen::VectorXd         pricesVector;
+    Eigen::VectorXd         boundsVector;
 
-    ProblemType     problemType = ProblemType::MAX;
+    Eigen::MatrixXd         simplexTable;
+    Eigen::MatrixXd         boundsMatrix;
 
-    bool isTargetFunctionModified() {
-        return virtualVariableIndices.size() != 0;
-    }
+    ProblemType             problemType;
 
     void buildSimplexTable() {
-        #ifdef __DEBUG__
-            std::cout << "Making coefficients positive\n";
-        #endif
-        for (size_t row = 0; row < simplexTable.rows(); ++row) {
+        makeCoefficientsPositive();
+
+        allocateMemory();
+
+        findAllVariables();
+
+        addConstraintsCoefficients();
+
+        addTargetFunctionRow();
+
+        if (!isTargetFunctionModified()) return;
+
+        addArtificialTargetFunctionRow();
+    }
+
+    void makeCoefficientsPositive() {
+        for (size_t row = 0; row < boundsMatrix.rows(); ++row) {
             if (boundsVector[row] >= 0) continue;
             boundsVector[row] *= -1.0;
             simplexTable.row(row) *= -1.0;
-
+            
             if (CompareSign(compareSigns[row]) == CompareSign::EQUAL) continue;
             compareSigns[row] = static_cast<int>(CompareSign(compareSigns[row]) == CompareSign::LESS_EQUAL? CompareSign::GREATER_EQUAL : CompareSign::LESS_EQUAL);
         }
 
         #ifdef __DEBUG__
-            std::cout << "Precompute all dimensions of vectors and matrix\n";
+            std::cout << "Made coefficients positive\n";
         #endif
-        allocateMemory();
-
-        #ifdef __DEBUG__
-            std::cout << "Taking values from bounds matrix to simplex table\n";
-        #endif
-        for (size_t row = 0; row < boundsMatrix.rows(); ++row) {
-            for (size_t col = 0; col < boundsMatrix.cols(); ++col) {
-                simplexTable(row, col) = boundsMatrix(row, col);
-            }
-        }
-
-        size_t naturalVariablesCount = 0;
-        size_t basicVariablesCount = 0;
-        size_t virtualVariablesCount = 0;
-        #ifdef __DEBUG__
-            std::cout << "Adding natural variables\n";
-        #endif
-        for (size_t index = 0; index < pricesVector.rows(); ++index) {
-            naturalVariableIndices[naturalVariablesCount++] = index;
-        }
-
-        size_t lastFilledRowIndex = boundsMatrix.rows() - 1;
-        size_t lastFilledColIndex = boundsMatrix.cols() - 1;
-
-        int additionalVariableIndex, virtualVariableIndex;
-
-        #ifdef __DEBUG__
-            std::cout << "Creating new variables\n";
-        #endif
-        for (size_t index = 0; index < compareSigns.rows(); ++index) {
-            createArtificialVariables(index, additionalVariableIndex, virtualVariableIndex, lastFilledColIndex);
-
-            naturalVariableIndices[naturalVariablesCount++] = additionalVariableIndex;
-
-            if (virtualVariableIndex != -1) {
-                basicVariableIndices[basicVariablesCount++] = virtualVariableIndex;
-                virtualVariableIndices[virtualVariablesCount++] = virtualVariableIndex;
-            }
-
-            basicVariableIndices[basicVariablesCount++] = additionalVariableIndex;
-        }
-
-        #ifdef __DEBUG__
-            std::cout << "Adding free coefficients\n";
-        #endif
-        simplexTable.block(0, ++lastFilledColIndex, boundsVector.rows(), 1) = boundsVector;
-        
-        #ifdef __DEBUG__
-            std::cout << "Adding target function row\n";
-        #endif
-        Eigen::VectorXd targetFunctionRow = Eigen::VectorXd::Zero(simplexTable.cols());
-        for (size_t index = 0; index < pricesVector.rows(); ++index) {
-            targetFunctionRow[index] = problemType == ProblemType::MAX? -pricesVector[index] : pricesVector[index];
-        }
-
-        simplexTable.row(++lastFilledRowIndex) = targetFunctionRow;
-
-        if (!isTargetFunctionModified()) return;
-
-        #ifdef __DEBUG__
-            std::cout << "Adding new target function row for slacks\n";
-        #endif
-        Eigen::VectorXd newTargetFunctionRow = Eigen::VectorXd::Zero(simplexTable.cols());
-        for (size_t virtualVariableIndex : virtualVariableIndices) {
-            newTargetFunctionRow[virtualVariableIndex] = 1.0;
-        }
-
-        simplexTable.row(++lastFilledRowIndex) = newTargetFunctionRow;
     }
 
     void allocateMemory() {
@@ -125,21 +70,62 @@ private:
             }
         }
 
+        basicVariableIndices = Eigen::VectorXi(basicNumber);
+        naturalVariableIndices = Eigen::VectorXi(naturalNumber);
+        virtualVariableIndices = Eigen::VectorXi(virtualNumber);
+
         #ifdef __DEBUG__
-            std::cout << "Allocating vectors\n";
+            std::cout << "Allocated vectors\n";
             std::cout << "Natural variables amount: " << naturalNumber << "\n";
             std::cout << "Basic variables amount: " << basicNumber << "\n";
             std::cout << "Virtual variables amount: " << virtualNumber << "\n";
         #endif
-        basicVariableIndices = Eigen::VectorXi(basicNumber);
-        naturalVariableIndices = Eigen::VectorXi(naturalNumber);
-        virtualVariableIndices = Eigen::VectorXi(virtualNumber);
+
+        simplexTable = Eigen::MatrixXd::Zero(boundsVector.rows() + 1 + isTargetFunctionModified(), naturalNumber + virtualNumber + 1);
+
         #ifdef __DEBUG__
-            std::cout << "Allocating simplex table\n";
+            std::cout << "Allocated simplex table\n";
             std::cout << "Rows: " << boundsVector.rows() + 1 + isTargetFunctionModified() << "\n";
             std::cout << "Cols: " << naturalNumber + virtualNumber + 1 << "\n";
         #endif
-        simplexTable = Eigen::MatrixXd::Zero(boundsVector.rows() + 1 + isTargetFunctionModified(), naturalNumber + virtualNumber + 1);
+    }
+
+    void findAllVariables() {
+        size_t naturalVariablesCount = 0;
+        size_t basicVariablesCount = 0;
+        size_t virtualVariablesCount = 0;
+
+        for (size_t index = 0; index < pricesVector.rows(); ++index) {
+            naturalVariableIndices[naturalVariablesCount++] = index;
+        }
+
+        #ifdef __DEBUG__
+            std::cout << "Added variables from target function\n";
+        #endif
+
+        size_t lastFilledColIndex = boundsMatrix.cols() - 1;
+
+        int additionalVariableIndex, virtualVariableIndex;
+
+        for (size_t index = 0; index < boundsMatrix.rows(); ++index) {
+            createArtificialVariables(index, additionalVariableIndex, virtualVariableIndex, lastFilledColIndex);
+
+            naturalVariableIndices[naturalVariablesCount++] = additionalVariableIndex;
+
+            if (virtualVariableIndex != -1) {
+                basicVariableIndices[basicVariablesCount++] = virtualVariableIndex;
+                virtualVariableIndices[virtualVariablesCount++] = virtualVariableIndex;
+            }
+
+            basicVariableIndices[basicVariablesCount++] = additionalVariableIndex;
+        }
+
+        #ifdef __DEBUG__
+            std::cout << "Created additional and virtual variables\n";
+            std::cout << "Natural variable indices: " << naturalVariableIndices << '\n';
+            std::cout << "Basic variable indices: " << basicVariableIndices << '\n';
+            std::cout << "Virtual variable indices: " << virtualVariableIndices << '\n';
+        #endif
     }
 
     void createArtificialVariables(int inequalityIndex, 
@@ -147,24 +133,71 @@ private:
                                 int& virtualVariableIndex,
                                 size_t& lastFilledColIndex) {
         if (CompareSign(compareSigns[inequalityIndex]) == CompareSign::GREATER_EQUAL) {
-            simplexTable.col(++lastFilledColIndex) = Eigen::VectorXd::Zero(simplexTable.rows());
-            simplexTable.col(++lastFilledColIndex) = Eigen::VectorXd::Zero(simplexTable.rows());
-            simplexTable(inequalityIndex, lastFilledColIndex) = 1.0;
-            simplexTable(inequalityIndex, lastFilledColIndex - 1) = -1.0;
+            simplexTable(inequalityIndex, ++lastFilledColIndex) = -1.0;
+            simplexTable(inequalityIndex, ++lastFilledColIndex) = 1.0;
             additionalVariableIndex = lastFilledColIndex - 1;
             virtualVariableIndex = lastFilledColIndex;
         } else {
-            simplexTable.col(++lastFilledColIndex) = Eigen::VectorXd::Zero(simplexTable.rows());
-            simplexTable(inequalityIndex, lastFilledColIndex) = 1.0;
+            simplexTable(inequalityIndex, ++lastFilledColIndex) = 1.0;
             additionalVariableIndex = lastFilledColIndex;
             virtualVariableIndex = CompareSign(compareSigns[inequalityIndex]) == CompareSign::EQUAL? additionalVariableIndex : -1;
         }
     }
 
-    bool excludeVirtualVariables() {
-        if (!isTargetFunctionModified()) return false;
+    void addConstraintsCoefficients() {
+        for (size_t row = 0; row < boundsMatrix.rows(); ++row) {
+            for (size_t col = 0; col < boundsMatrix.cols(); ++col) {
+                simplexTable(row, col) = boundsMatrix(row, col);
+            }
+        }
 
-        const int lastRowId = simplexTable.rows() - 1;
+        #ifdef __DEBUG__
+            std::cout << "Carried values from bounds matrix to simplex table\n";
+            std::cout << "Simplex table:\n" << simplexTable << '\n';
+        #endif
+
+        simplexTable.block(0, simplexTable.cols() - 1, boundsVector.rows(), 1) = boundsVector;
+
+        #ifdef __DEBUG__
+            std::cout << "Carried free coefficients from bounds vector to simplex table\n";
+            std::cout << "Simplex table:\n" << simplexTable << '\n';
+        #endif
+    }
+
+    void addTargetFunctionRow() {
+        Eigen::VectorXd targetFunctionRow = Eigen::VectorXd::Zero(simplexTable.cols());
+        
+        for (size_t index = 0; index < pricesVector.rows(); ++index) {
+            targetFunctionRow[index] = problemType == ProblemType::MAX ? -pricesVector[index] : pricesVector[index];
+        }
+
+        simplexTable.row(boundsMatrix.rows()) = targetFunctionRow;
+
+        #ifdef __DEBUG__
+            std::cout << "Adding target function row\n";
+            std::cout << "Simplex table:\n" << simplexTable << '\n';
+        #endif
+    }
+
+    void addArtificialTargetFunctionRow() {
+        Eigen::VectorXd newTargetFunctionRow = Eigen::VectorXd::Zero(simplexTable.cols());
+        
+        for (size_t virtualVariableIndex : virtualVariableIndices) {
+            newTargetFunctionRow[virtualVariableIndex] = 1.0;
+        }
+
+        simplexTable.row(boundsMatrix.rows() + 1) = newTargetFunctionRow;
+
+        #ifdef __DEBUG__
+            std::cout << "Added artificial target function row\n";
+            std::cout << "Simplex table:\n" << simplexTable << '\n';
+        #endif
+    }
+
+    void excludeVirtualVariables() {
+        if (!isTargetFunctionModified()) return;
+
+        const size_t lastRowId = simplexTable.rows() - 1;
 
         for (size_t virtualVariableIndex : virtualVariableIndices) {
             for (size_t row = 0; row < simplexTable.rows(); ++row) {
@@ -175,7 +208,9 @@ private:
             }
         }
 
-        return true;
+        #ifdef __DEBUG__
+            std::cout << "Excluded virtual variables\n";
+        #endif
     }
 
     bool isPlanOptimal() {
@@ -195,7 +230,7 @@ private:
         return isOptimal;
     }
 
-    int getMainCol() {
+    int getMainColumn() {
         Eigen::RowVectorXd row = simplexTable.row(simplexTable.rows() - 1);
         double minimumNotPositive = 0;
         int mainCol = -1;
@@ -275,9 +310,55 @@ private:
         return solution;
     }
 
-public:
+    SimplexStepCode simplexStep() {
+        double mainElement;
+        int mainRow, mainCol;
 
-    Simplex(const Eigen::MatrixXd& boundsMatrix, const Eigen::VectorXd& boundsVector, const Eigen::VectorXd& pricesVector, const Eigen::VectorXi& compareSigns) {
+        mainCol = getMainColumn();
+
+        if (mainCol == -1) {
+            return SimplexStepCode::NO_MAIN_COLUMN;
+        }
+
+        mainRow = getMainRow(mainCol);
+
+        if (mainRow == -1) {
+            return SimplexStepCode::NO_MAIN_ROW;
+        }
+
+        basicVariableIndices[mainRow] = mainCol;
+        mainElement = simplexTable(mainRow, mainCol);
+        simplexTable.row(mainRow) /= mainElement;
+
+        for (size_t index = 0; index < simplexTable.rows(); ++index) {
+            if (index == mainRow) continue;
+            simplexTable.row(index) -= simplexTable(index, mainCol) * simplexTable.row(mainRow);
+        }
+
+        return SimplexStepCode::NEXT_STEP;
+    }
+
+    SimplexResult generateResult(const int iteration) {
+        Eigen::VectorXd simplexSolution = validateSolution()? getSimplexSolution(true) : Eigen::VectorXd::Zero(0);
+        const size_t targetFunctionRowIndex = isTargetFunctionModified()? simplexTable.rows() - 2 : simplexTable.rows() - 1;
+        const size_t targetFunctionColIndex = simplexTable.cols() - 1;
+        const double targetFunctionValue = simplexTable.row(targetFunctionRowIndex)[targetFunctionColIndex];
+
+        SimplexResult result(simplexSolution, targetFunctionValue, this->problemType, iteration);
+        result.writeResult(compareSigns, pricesVector, boundsVector, boundsMatrix);
+
+        return result;
+    }
+
+    inline bool isTargetFunctionModified() {
+        return virtualVariableIndices.size() != 0;
+    }
+    
+public:
+    Simplex(const Eigen::MatrixXd& boundsMatrix, 
+            const Eigen::VectorXd& boundsVector, 
+            const Eigen::VectorXd& pricesVector, 
+            const Eigen::VectorXi& compareSigns) {
         if (boundsMatrix.rows() != boundsVector.rows()) {
             throw new std::invalid_argument("Error, when creating an instance of Simplex: number of rows in boundsMatrix is not equal to number of elements in boundsVector");
         }
@@ -296,7 +377,10 @@ public:
         this->compareSigns = compareSigns;
     }
 
-    Simplex(Eigen::MatrixXd&& boundsMatrix, Eigen::VectorXd&& boundsVector, Eigen::VectorXd&& pricesVector, Eigen::VectorXi&& compareSigns) {
+    Simplex(Eigen::MatrixXd&& boundsMatrix, 
+            Eigen::VectorXd&& boundsVector, 
+            Eigen::VectorXd&& pricesVector, 
+            Eigen::VectorXi&& compareSigns) {
         if (boundsMatrix.rows() != boundsVector.rows()) {
             throw new std::invalid_argument("Error, when creating an instance of Simplex: number of rows in boundsMatrix is not equal to number of elements in boundsVector");
         }
@@ -315,71 +399,44 @@ public:
         this->compareSigns = std::move(compareSigns);
     }
 
-    Eigen::VectorXd solve(ProblemType problemType) {
+    ~Simplex() = default;
+
+    SimplexResult solve(ProblemType problemType) {
         this->problemType = problemType;
 
-        #ifdef __DEBUG__
-            std::cout << "Start building simplex table\n";
-        #endif
         buildSimplexTable();
-        #ifdef __DEBUG__
-            std::cout << "End building simplex table\n";
-        #endif
 
-        double mainElement;
-        int mainRow, mainCol, iteration = 0;
-        Eigen::VectorXd solution (pricesVector.size());
+        excludeVirtualVariables();
 
-        if (excludeVirtualVariables()) {
-            std::cout << "Virtual variables was removed from simplex table\n";
-        }
-
-        #ifdef __DEBUG__
-            std::cout << "Starting main algorithm\n";
-        #endif
-        while ((!isPlanOptimal()) || (iteration != SIMPLEX_MAX_ITERATIONS)) {
+        int iteration = 0;
+        while ((!isPlanOptimal()) && (iteration != SIMPLEX_MAX_ITERATIONS)) {
             ++iteration;
             #ifdef __DEBUG__
                 std::cout << "Iteration: " << iteration << '\n';
                 std::cout << "Simplex table:\n" << simplexTable << '\n';
-                std::cout << "Getting main column\n";
             #endif
-            mainCol = getMainCol();
-
-            if (mainCol == -1) {
+            
+            if(simplexStep() != SimplexStepCode::NEXT_STEP) {
                 break;
             }
-
-            #ifdef __DEBUG__
-                std::cout << "Getting main row\n";
-            #endif
-            mainRow = getMainRow(mainCol);
-
-            if (mainRow == -1) {
-                return solution;
-            }
-
-            basicVariableIndices[mainRow] = mainCol;
-
-            mainElement = simplexTable(mainRow, mainCol);
-
-            simplexTable.row(mainRow) /= mainElement;
-
-            for (size_t index = 0; index < simplexTable.rows(); ++index) {
-                if (index == mainRow) continue;
-                simplexTable.row(index) -= simplexTable(index, mainCol) * simplexTable.row(mainRow);
-            }
         }
 
-        #ifdef __DEBUG__
-            std::cout << "Starting validating solution\n";
-        #endif
-        if (validateSolution()) {
-            #ifdef __DEBUG__
-                std::cout << "Solution is valid. Getting the answer\n";
-            #endif
-            solution = getSimplexSolution(true);
-        }
-        return solution;
+        return generateResult(iteration);
+    }
+
+    const Eigen::VectorXi& getCompareSigns() {
+        return compareSigns;
+    }
+
+    const Eigen::VectorXd& getPricesVector() {
+        return pricesVector;
+    }
+
+    const Eigen::VectorXd& getBoundsVector() {
+        return boundsVector;
+    }
+
+    const Eigen::MatrixXd& getBoundsMatrix() {
+        return boundsMatrix;
     }
 };

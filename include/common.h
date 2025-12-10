@@ -11,5 +11,8 @@
 #define PER_COORD_DESCEND_STEP  2.0
 #define ACCURACY                1e-6
 #define ITERS_MAX               50
+#define DOUBLE_EQUAL_PRECISION  1e-10
 
 using function_nd = std::function<double(const Eigen::VectorXd&)>;
+
+enum class ProblemType {MAX, MIN};

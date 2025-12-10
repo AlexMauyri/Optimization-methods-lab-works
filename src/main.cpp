@@ -91,7 +91,7 @@ void lab4() {
     Eigen::VectorXd boundsVector(3);
     Eigen::MatrixXd boundsMatrix(3, 2);
 
-    compareSigns << 0, 0, 0;
+    compareSigns << 2, 2, 2;
     pricesVector << 2, 3;
     boundsVector << 40, 28, 14;
     boundsMatrix << -2, 6, 3, 2, 2, -1;
@@ -100,7 +100,21 @@ void lab4() {
 
     Simplex simplex {boundsMatrix, boundsVector, pricesVector, compareSigns};
 
-    std::cout << simplex.solve(ProblemType::MAX);
+    std::cout << simplex.solve(ProblemType::MIN);
+
+    Eigen::VectorXi compareSigns1(2);
+    Eigen::VectorXd pricesVector1(3);
+    Eigen::VectorXd boundsVector1(2);
+    Eigen::MatrixXd boundsMatrix1(2, 3);
+
+    compareSigns1 << 2, 0;
+    pricesVector1 << 1, 0, 0;
+    boundsVector1 << 2, 20;
+    boundsMatrix1 << 1, 1, 1, 4, 5, 5;
+
+    Simplex simplex1 {boundsMatrix1, boundsVector1, pricesVector1, compareSigns1};
+
+    std::cout << simplex1.solve(ProblemType::MAX);
 }
 
 int main() {
