@@ -91,12 +91,10 @@ void lab4() {
     Eigen::VectorXd boundsVector(3);
     Eigen::MatrixXd boundsMatrix(3, 2);
 
-    compareSigns << 2, 2, 2;
+    compareSigns << CompareSign::GREATER_EQUAL, CompareSign::GREATER_EQUAL, CompareSign::GREATER_EQUAL;
     pricesVector << 2, 3;
     boundsVector << 40, 28, 14;
     boundsMatrix << -2, 6, 3, 2, 2, -1;
-
-    std::cout << "Starting Simplex method\n";
 
     Simplex simplex {boundsMatrix, boundsVector, pricesVector, compareSigns};
 
@@ -107,7 +105,7 @@ void lab4() {
     Eigen::VectorXd boundsVector1(2);
     Eigen::MatrixXd boundsMatrix1(2, 3);
 
-    compareSigns1 << 2, 0;
+    compareSigns1 << CompareSign::GREATER_EQUAL, CompareSign::LESS_EQUAL;
     pricesVector1 << 1, 0, 0;
     boundsVector1 << 2, 20;
     boundsMatrix1 << 1, 1, 1, 4, 5, 5;

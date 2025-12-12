@@ -15,4 +15,5 @@
 
 using function_nd = std::function<double(const Eigen::VectorXd&)>;
 
-enum class ProblemType {MAX, MIN};
+enum ProblemType {MAX, MIN};
+enum CompareSign {LESS_EQUAL, EQUAL, GREATER_EQUAL};

@@ -1,10 +1,10 @@
 #include <Eigen/Dense>
 #include <iostream>
+#include <algorithm>
 
 #include "SimplexResult.h"
 #include "common.h"
 
-enum class CompareSign {LESS_EQUAL, EQUAL, GREATER_EQUAL};
 enum class SimplexStepCode {NEXT_STEP, NO_MAIN_COLUMN, NO_MAIN_ROW};
 
 class Simplex final {
@@ -27,28 +27,22 @@ private:
 
     void buildSimplexTable() {
         makeCoefficientsPositive();
-
         allocateMemory();
-
         findAllVariables();
-
         addConstraintsCoefficients();
-
         addTargetFunctionRow();
-
         if (!isTargetFunctionModified()) return;
-
         addArtificialTargetFunctionRow();
     }
 
-    void makeCoefficientsPositive() {
-        for (size_t row = 0; row < boundsMatrix.rows(); ++row) {
-            if (boundsVector[row] >= 0) continue;
-            boundsVector[row] *= -1.0;
-            simplexTable.row(row) *= -1.0;
+    inline void makeCoefficientsPositive() {
+        for (size_t rowIndex = 0; rowIndex < boundsMatrix.rows(); ++rowIndex) {
+            if (boundsVector[rowIndex] >= 0) continue;
+            boundsVector[rowIndex] *= -1.0;
+            simplexTable.row(rowIndex) *= -1.0;
             
-            if (CompareSign(compareSigns[row]) == CompareSign::EQUAL) continue;
-            compareSigns[row] = static_cast<int>(CompareSign(compareSigns[row]) == CompareSign::LESS_EQUAL? CompareSign::GREATER_EQUAL : CompareSign::LESS_EQUAL);
+            if (compareSigns[rowIndex] == CompareSign::EQUAL) continue;
+            compareSigns[rowIndex] = compareSigns[rowIndex] == CompareSign::LESS_EQUAL? CompareSign::GREATER_EQUAL : CompareSign::LESS_EQUAL;
         }
 
         #ifdef __DEBUG__
@@ -56,13 +50,11 @@ private:
         #endif
     }
 
-    void allocateMemory() {
+    inline void allocateMemory() {
         size_t naturalNumber = pricesVector.rows() + boundsVector.rows(), basicNumber = 0, virtualNumber = 0;
-        CompareSign compareSign;
 
         for (int value : compareSigns) {
-            compareSign = static_cast<CompareSign>(value);
-            if (compareSign == CompareSign::LESS_EQUAL) {
+            if (value == CompareSign::LESS_EQUAL) {
                 basicNumber += 1;
             } else {
                 basicNumber += 2;
@@ -90,7 +82,7 @@ private:
         #endif
     }
 
-    void findAllVariables() {
+    inline void findAllVariables() {
         size_t naturalVariablesCount = 0;
         size_t basicVariablesCount = 0;
         size_t virtualVariablesCount = 0;
@@ -107,8 +99,8 @@ private:
 
         int additionalVariableIndex, virtualVariableIndex;
 
-        for (size_t index = 0; index < boundsMatrix.rows(); ++index) {
-            createArtificialVariables(index, additionalVariableIndex, virtualVariableIndex, lastFilledColIndex);
+        for (size_t inequalityIndex = 0; inequalityIndex < boundsMatrix.rows(); ++inequalityIndex) {
+            createArtificialVariables(inequalityIndex, additionalVariableIndex, virtualVariableIndex, lastFilledColIndex);
 
             naturalVariableIndices[naturalVariablesCount++] = additionalVariableIndex;
 
@@ -128,11 +120,11 @@ private:
         #endif
     }
 
-    void createArtificialVariables(int inequalityIndex, 
+    inline void createArtificialVariables(int inequalityIndex, 
                                 int& additionalVariableIndex, 
                                 int& virtualVariableIndex,
                                 size_t& lastFilledColIndex) {
-        if (CompareSign(compareSigns[inequalityIndex]) == CompareSign::GREATER_EQUAL) {
+        if (compareSigns[inequalityIndex] == CompareSign::GREATER_EQUAL) {
             simplexTable(inequalityIndex, ++lastFilledColIndex) = -1.0;
             simplexTable(inequalityIndex, ++lastFilledColIndex) = 1.0;
             additionalVariableIndex = lastFilledColIndex - 1;
@@ -140,14 +132,14 @@ private:
         } else {
             simplexTable(inequalityIndex, ++lastFilledColIndex) = 1.0;
             additionalVariableIndex = lastFilledColIndex;
-            virtualVariableIndex = CompareSign(compareSigns[inequalityIndex]) == CompareSign::EQUAL? additionalVariableIndex : -1;
+            virtualVariableIndex = compareSigns[inequalityIndex] == CompareSign::EQUAL? additionalVariableIndex : -1;
         }
     }
 
-    void addConstraintsCoefficients() {
-        for (size_t row = 0; row < boundsMatrix.rows(); ++row) {
-            for (size_t col = 0; col < boundsMatrix.cols(); ++col) {
-                simplexTable(row, col) = boundsMatrix(row, col);
+    inline void addConstraintsCoefficients() {
+        for (size_t rowIndex = 0; rowIndex < boundsMatrix.rows(); ++rowIndex) {
+            for (size_t colIndex = 0; colIndex < boundsMatrix.cols(); ++colIndex) {
+                simplexTable(rowIndex, colIndex) = boundsMatrix(rowIndex, colIndex);
             }
         }
 
@@ -164,14 +156,10 @@ private:
         #endif
     }
 
-    void addTargetFunctionRow() {
-        Eigen::VectorXd targetFunctionRow = Eigen::VectorXd::Zero(simplexTable.cols());
-        
+    inline void addTargetFunctionRow() {
         for (size_t index = 0; index < pricesVector.rows(); ++index) {
-            targetFunctionRow[index] = problemType == ProblemType::MAX ? -pricesVector[index] : pricesVector[index];
+            simplexTable(boundsMatrix.rows(), index) = problemType == ProblemType::MAX ? -pricesVector[index] : pricesVector[index];
         }
-
-        simplexTable.row(boundsMatrix.rows()) = targetFunctionRow;
 
         #ifdef __DEBUG__
             std::cout << "Adding target function row\n";
@@ -179,14 +167,10 @@ private:
         #endif
     }
 
-    void addArtificialTargetFunctionRow() {
-        Eigen::VectorXd newTargetFunctionRow = Eigen::VectorXd::Zero(simplexTable.cols());
-        
+    inline void addArtificialTargetFunctionRow() {
         for (size_t virtualVariableIndex : virtualVariableIndices) {
-            newTargetFunctionRow[virtualVariableIndex] = 1.0;
+            simplexTable(boundsMatrix.rows() + 1, virtualVariableIndex) = 1.0;
         }
-
-        simplexTable.row(boundsMatrix.rows() + 1) = newTargetFunctionRow;
 
         #ifdef __DEBUG__
             std::cout << "Added artificial target function row\n";
@@ -194,16 +178,15 @@ private:
         #endif
     }
 
-    void excludeVirtualVariables() {
+    inline void excludeVirtualVariables() {
         if (!isTargetFunctionModified()) return;
 
         const size_t lastRowId = simplexTable.rows() - 1;
 
         for (size_t virtualVariableIndex : virtualVariableIndices) {
-            for (size_t row = 0; row < simplexTable.rows(); ++row) {
-                if (simplexTable(row, virtualVariableIndex) == 0) continue;
-                double arg = simplexTable(lastRowId, virtualVariableIndex) / simplexTable(row, virtualVariableIndex);
-                simplexTable.row(lastRowId) -= arg * simplexTable.row(row);
+            for (size_t rowIndex = 0; rowIndex < simplexTable.rows(); ++rowIndex) {
+                if (simplexTable(rowIndex, virtualVariableIndex) == 0) continue;
+                simplexTable.row(lastRowId) -= simplexTable.row(rowIndex);
                 break;
             }
         }
@@ -213,31 +196,34 @@ private:
         #endif
     }
 
-    bool isPlanOptimal() {
-        bool isOptimal = true;
-        for (int value : simplexTable.row(simplexTable.rows() - 1)) {
-            isOptimal = value < 0;
-            if (!isOptimal) break;
-        }
+    inline bool isPlanOptimal() {
+        const auto& lastRow = simplexTable.row(simplexTable.rows() - 1);
+        bool isOptimal = std::all_of(
+            lastRow.data(), 
+            lastRow.data() + (simplexTable.cols() - 1), 
+            [](double value) {return value >= 0.0;}
+        );
 
-        if (!isTargetFunctionModified()) return isOptimal;
+        if (!isTargetFunctionModified() || isOptimal == false) return isOptimal;
         
-        for (int value : simplexTable.row(simplexTable.rows() - 2)) {
-            isOptimal &= value < 0;
-            if (!isOptimal) break;
-        }
+        const auto& row = simplexTable.row(simplexTable.rows() - 2);
+        isOptimal = std::all_of(
+            naturalVariableIndices.begin(), 
+            naturalVariableIndices.end(), 
+            [row](int naturalVariableIndex) {return row[naturalVariableIndex] >= 0.0;}
+        );
 
         return isOptimal;
     }
 
     int getMainColumn() {
-        Eigen::RowVectorXd row = simplexTable.row(simplexTable.rows() - 1);
-        double minimumNotPositive = 0;
+        Eigen::VectorXd row = simplexTable.row(simplexTable.rows() - 1);
+        double minimumNegative = 0;
         int mainCol = -1;
 
-        for (size_t index = 0; index < row.cols() - 1; ++index) {
-            if (row[index] >= minimumNotPositive) continue;
-            minimumNotPositive = row[index];
+        for (size_t index = 0; index < row.rows() - 1; ++index) {
+	    if (row[index] >= minimumNegative) continue;
+            minimumNegative = row[index];
             mainCol = index;
         }
 
@@ -246,8 +232,8 @@ private:
         row = simplexTable.row(simplexTable.rows() - 2);
 
         for (size_t index : naturalVariableIndices) {
-            if (row[index] >= minimumNotPositive) continue;
-            minimumNotPositive = row[index];
+            if (row[index] >= minimumNegative) continue;
+            minimumNegative = row[index];
             mainCol = index;
         }
 
@@ -256,7 +242,8 @@ private:
 
     int getMainRow(int mainCol) {
         double minimumValue = std::numeric_limits<double>::max(), mainElement;
-        int mainRow = -1, lastColIndex = simplexTable.cols() - 1, targetFunctionRowIndex = isTargetFunctionModified()? simplexTable.rows() - 2 : simplexTable.rows() - 1;
+        int mainRow = -1, lastColIndex = simplexTable.cols() - 1;
+        int targetFunctionRowIndex = isTargetFunctionModified()? simplexTable.rows() - 2 : simplexTable.rows() - 1;
 
         for (size_t index = 0; index < targetFunctionRowIndex; ++index) {
             mainElement = simplexTable(index, mainCol);
@@ -271,7 +258,7 @@ private:
     }
 
     bool validateSolution() {
-        double targetFunctionValue = 0;
+        double targetFunctionValue = 0.0;
 
         const size_t targetFunctionRowIndex = isTargetFunctionModified()? simplexTable.rows() - 2 : simplexTable.rows() - 1;
         const size_t targetFunctionColIndex = simplexTable.cols() - 1;
@@ -285,7 +272,7 @@ private:
         }
 
         double sign = problemType == ProblemType::MAX? -1.0 : 1.0;
-        double targetFunctionTableValue = simplexTable.row(targetFunctionRowIndex)[targetFunctionColIndex];
+        double targetFunctionTableValue = simplexTable(targetFunctionRowIndex, targetFunctionColIndex);
         #ifdef __DEBUG__
             std::cout << "Value of target function: " << targetFunctionValue << "; Value of target function in table: " << targetFunctionTableValue << '\n';
         #endif
@@ -401,6 +388,7 @@ public:
 
     ~Simplex() = default;
 
+    //simplexStep saving in variable and then debug output
     SimplexResult solve(ProblemType problemType) {
         this->problemType = problemType;
 
@@ -424,19 +412,19 @@ public:
         return generateResult(iteration);
     }
 
-    const Eigen::VectorXi& getCompareSigns() {
+    const Eigen::VectorXi& getCompareSigns() noexcept {
         return compareSigns;
     }
 
-    const Eigen::VectorXd& getPricesVector() {
+    const Eigen::VectorXd& getPricesVector() noexcept {
         return pricesVector;
     }
 
-    const Eigen::VectorXd& getBoundsVector() {
+    const Eigen::VectorXd& getBoundsVector() noexcept {
         return boundsVector;
     }
 
-    const Eigen::MatrixXd& getBoundsMatrix() {
+    const Eigen::MatrixXd& getBoundsMatrix() noexcept {
         return boundsMatrix;
     }
 };

@@ -1,4 +1,3 @@
-#include <memory>
 #include <Eigen/Dense>
 #include <iomanip>
 
@@ -23,7 +22,7 @@ private:
                            const Eigen::MatrixXd& boundsMatrix) {
         
         outputStream << std::string(SEPARATOR_LENGTH, '=') << "\n";
-        outputStream << "LINEAR PROGRAMMING PROBLEM\n";
+        outputStream << "Linear programming problem\n";
         outputStream << std::string(SEPARATOR_LENGTH, '=') << "\n\n";
 
         outputStream << "Target function: ";
@@ -34,7 +33,7 @@ private:
         }
         addObjectiveFunction(pricesVector);
         
-        outputStream << "\n\nConstraints:\n";
+        outputStream << "\n\nConstraints:\n\n";
         addConstraints(compareSigns, boundsVector, boundsMatrix);
         
         outputStream << "\nNon-negativity conditions: ";
@@ -48,29 +47,24 @@ private:
     }
 
     void addObjectiveFunction(const Eigen::VectorXd& pricesVector) {
-        bool firstTerm = true;
+        bool isFirstCoefficient = true;
         for (int i = 0; i < pricesVector.rows(); ++i) {
-            double coeff = pricesVector[i];
+            double priceCoefficient = pricesVector[i];
+
+            if (abs(priceCoefficient) <= DOUBLE_EQUAL_PRECISION) continue;
             
-            if (std::abs(coeff) < 1e-10) continue;
-            
-            if (!firstTerm) {
-                outputStream << (coeff > 0 ? " + " : " - ");
-            } else if (coeff < 0) {
+            if (!isFirstCoefficient) {
+                outputStream << (priceCoefficient > 0 ? " + " : " - ");
+            } else if (priceCoefficient < 0) {
                 outputStream << "-";
             }
             
-            if (std::abs(std::abs(coeff) - 1.0) > 1e-10 || firstTerm || coeff < 0) {
-                outputStream << std::abs(coeff);
-                if (i < pricesVector.rows()) outputStream;
+            if (std::abs(std::abs(priceCoefficient) - 1.0) > DOUBLE_EQUAL_PRECISION) {
+                outputStream << std::abs(priceCoefficient);
             }
             
             outputStream << "x" << i + 1;
-            firstTerm = false;
-        }
-        
-        if (firstTerm) {
-            outputStream << "0";
+            isFirstCoefficient = false;
         }
     }
 
@@ -79,12 +73,14 @@ private:
                        const Eigen::MatrixXd& boundsMatrix) {
         for (int i = 0; i < boundsVector.rows(); ++i) {
             outputStream << "  ";
-            bool firstTerm = true;
+            bool isFirstCoefficient = true;
             
             for (int j = 0; j < boundsMatrix.cols(); ++j) {
                 double constraintCoefficient = boundsMatrix(i, j);
+
+                if (abs(constraintCoefficient) <= DOUBLE_EQUAL_PRECISION) continue;
                 
-                if (!firstTerm) {
+                if (!isFirstCoefficient) {
                     outputStream << (constraintCoefficient > 0 ? " + " : " - ");
                 } else if (constraintCoefficient < 0) {
                     outputStream << "-";
@@ -95,14 +91,14 @@ private:
                 }
                 
                 outputStream << "x" << j + 1;
-                firstTerm = false;
+                isFirstCoefficient = false;
             }
             
             outputStream << " ";
             switch (compareSigns[i]) {
-                case 0: outputStream << "<="; break;
-                case 1: outputStream << "="; break;
-                case 2: outputStream << ">="; break;
+                case CompareSign::LESS_EQUAL: outputStream << "<="; break;
+                case CompareSign::EQUAL: outputStream << "="; break;
+                case CompareSign::GREATER_EQUAL: outputStream << ">="; break;
             }
             outputStream << " " << boundsVector[i] << "\n";
         }
@@ -135,9 +131,7 @@ private:
 
     void addConstraintsVerification(const Eigen::VectorXi& compareSigns,
                                    const Eigen::VectorXd& boundsVector,
-                                   const Eigen::MatrixXd& boundsMatrix) {
-        //if (simplexSolution.size() != 0) return;
-        
+                                   const Eigen::MatrixXd& boundsMatrix) {  
         outputStream << "Constraints verification:\n\n";
         for (int i = 0; i < boundsVector.rows(); ++i) {
             double constraintValue = 0.0;
@@ -145,21 +139,21 @@ private:
                 constraintValue += boundsMatrix(i, j) * simplexSolution[j];
             }
             
-            outputStream << "  Constraint  " << i + 1 << ": " << std::fixed << std::setprecision(PRECISION) 
+            outputStream << "  Constraint " << i + 1 << ": " << std::fixed << std::setprecision(PRECISION) 
                        << constraintValue;
             
             switch (compareSigns[i]) {
-                case 0: 
+                case CompareSign::LESS_EQUAL: 
                     outputStream << " <= " << boundsVector[i];
                     if (constraintValue - boundsVector[i] > 1e-6) outputStream << " - Violated!";
                     else outputStream << " - Satisfied";
                     break;
-                case 1:  
+                case CompareSign::EQUAL:  
                     outputStream << " = " << boundsVector[i];
                     if (std::abs(constraintValue - boundsVector[i]) > 1e-6) outputStream << " - Violated!";
                     else outputStream << " - Satisfied";
                     break;
-                case 2:  
+                case CompareSign::GREATER_EQUAL:  
                     outputStream << " >= " << boundsVector[i];
                     if (boundsVector[i] - constraintValue > 1e-6) outputStream << " - Violated!";
                     else outputStream << " - Satisfied";
