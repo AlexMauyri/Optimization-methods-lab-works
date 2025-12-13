@@ -318,7 +318,6 @@ private:
             input,
             isFeasible
         );
-        output.writeResult();
 
         return output;
     }
