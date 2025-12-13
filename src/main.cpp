@@ -12,6 +12,7 @@
 #include "InnerPenaltyFunction.h"
 #include "OuterPenaltyFunction.h"
 #include "Simplex.h"
+#include "SimplexInput.h"
 
 double test_func(const double x) {
 	return (x - 1) * (x - 5); //3
@@ -96,7 +97,9 @@ void lab4() {
     boundsVector << 40, 28, 14;
     boundsMatrix << -2, 6, 3, 2, 2, -1;
 
-    Simplex simplex {boundsMatrix, boundsVector, pricesVector, compareSigns};
+    SimplexInput input {boundsMatrix, boundsVector, pricesVector, compareSigns};
+
+    Simplex simplex {input};
 
     std::cout << simplex.solve(ProblemType::MIN);
 
@@ -110,7 +113,9 @@ void lab4() {
     boundsVector1 << 2, 20;
     boundsMatrix1 << 1, 1, 1, 4, 5, 5;
 
-    Simplex simplex1 {boundsMatrix1, boundsVector1, pricesVector1, compareSigns1};
+    SimplexInput input1 {boundsMatrix1, boundsVector1, pricesVector1, compareSigns1};
+
+    Simplex simplex1 {input1};
 
     std::cout << simplex1.solve(ProblemType::MAX);
 }
